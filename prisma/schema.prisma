@@ -1,0 +1,98 @@
+// prisma/schema.prisma
+// 오늘의귤 Project_Beta
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id              String   @id @default(cuid())
+  role            Role     @default(USER)
+  name            String?
+  phone           String?
+  addressBase     String?
+  addressDetail   String?
+  provider        String
+  providerId      String
+  profileComplete Boolean  @default(false)
+  createdAt       DateTime @default(now())
+  orders          Order[]
+
+  @@unique([provider, providerId])
+}
+
+model Product {
+  id          String      @id @default(cuid())
+  name        String
+  description String
+  price       Int
+  stock       Int         @default(0)
+  isActive    Boolean     @default(true)
+  imageUrl    String?
+  createdAt   DateTime    @default(now())
+  orderItems  OrderItem[]
+}
+
+model Order {
+  id                  String          @id @default(cuid())
+  userId              String
+  user                User            @relation(fields: [userId], references: [id])
+  status              OrderStatus     @default(DRAFT)
+  totalAmount         Int
+  depositorName       String?
+  bankAccountSnapshot String?
+  requestedDepositAt  DateTime?
+  paidAt              DateTime?
+  canceledAt          DateTime?
+  cancelReason        String?
+  createdAt           DateTime        @default(now())
+  items               OrderItem[]
+  paymentRequest      PaymentRequest?
+}
+
+model OrderItem {
+  id                   String    @id @default(cuid())
+  orderId              String
+  order                Order     @relation(fields: [orderId], references: [id])
+  productId            String
+  product              Product   @relation(fields: [productId], references: [id])
+  quantity             Int
+  unitPrice            Int
+  recipientName        String
+  recipientPhone       String
+  recipientAddressBase String
+  recipientAddressDetail String?
+  trackingNumber       String?
+  carrier              String?
+  shippedAt            DateTime?
+  deliveredAt          DateTime?
+}
+
+model PaymentRequest {
+  id                String    @id @default(cuid())
+  orderId           String    @unique
+  order             Order     @relation(fields: [orderId], references: [id])
+  requestedAt       DateTime  @default(now())
+  confirmedAt       DateTime?
+  confirmedByAdminId String?
+  note              String?
+}
+
+enum OrderStatus {
+  DRAFT
+  DEPOSIT_REQUESTED
+  PAYMENT_CONFIRMED
+  SHIPPING
+  DELIVERED
+  CANCELED
+}
+
+enum Role {
+  USER
+  ADMIN
+}

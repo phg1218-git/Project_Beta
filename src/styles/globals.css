@@ -1,0 +1,67 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Google Fonts - Pretendard CDN */
+@import url('https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@400;600;700;900&display=swap');
+
+:root {
+  /* ── 오늘의귤 Design System ── */
+  --primary:        #FF8A00;
+  --secondary:      #FFC94A;
+  --accent:         #6BAF5E;
+  --bg:             #FFF8EE;
+  --surface:        #FFFFFF;
+  --neutral-100:    #F5F5F5;
+  --neutral-200:    #E0E0E0;
+  --text-primary:   #1A1A1A;
+  --text-secondary: #6B6B6B;
+  --error:          #D32F2F;
+
+  /* ── 컴포넌트 ── */
+  --radius-card:    16px;
+  --shadow-card:    0 4px 16px rgba(0,0,0,0.08);
+  --shadow-header:  0 1px 4px rgba(0,0,0,0.08);
+
+  /* ── 하단 탭바 ── */
+  --bottom-nav-height: 64px;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  font-family: 'Pretendard', 'Apple SD Gothic Neo', -apple-system, BlinkMacSystemFont, sans-serif;
+  background: var(--bg);
+  color: var(--text-primary);
+  min-height: 100vh;
+  /* 하단 탭바(64px) + iPhone safe-area + 여유 8px */
+  padding-bottom: calc(var(--bottom-nav-height) + env(safe-area-inset-bottom, 0px) + 8px);
+}
+
+/* ── 페이지 전환 애니메이션 ── */
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0);   }
+}
+
+.page-enter {
+  animation: fadeInUp 0.3s ease;
+}
+
+/* ── 귤 이모지 플로팅 ── */
+@keyframes float {
+  0%, 100% { transform: translateY(0);    }
+  50%       { transform: translateY(-12px); }
+}
+
+.float-emoji {
+  animation: float 3s ease-in-out infinite;
+}
