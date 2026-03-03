@@ -64,9 +64,28 @@ model User {
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
 
-  accounts Account[]
-  sessions Session[]
-  orders   Order[]
+  accounts          Account[]
+  sessions          Session[]
+  orders            Order[]
+  shippingAddresses ShippingAddress[]
+}
+
+// ── 배송지 관리 모델 ──
+
+model ShippingAddress {
+  id            String   @id @default(cuid())
+  userId        String
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name          String   // 수령인 이름
+  phone         String   // 수령인 연락처
+  addressBase   String   // 기본 주소
+  addressDetail String?  // 상세 주소
+  label         String?  // 별칭 (예: 집, 회사)
+  isDefault     Boolean  @default(false) // 기본 배송지 여부
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([userId])
 }
 
 // ── 비즈니스 모델 ──

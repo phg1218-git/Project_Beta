@@ -2,19 +2,36 @@
 
 import Link from 'next/link'
 import { useSession, signOut } from 'next-auth/react'
-import { useState } from 'react'
-
-// OrangeTopHeader
-// - sticky + blur 배경
-// - 로그인 상태에 따라 버튼 변경
-// - role === 'ADMIN'일 때만 "관리자" 버튼 노출
-// - 프로필 수정 버튼 추가
+import { useState, useEffect } from 'react'
+import { usePathname } from 'next/navigation'
 
 export function OrangeTopHeader() {
   const { data: session, status } = useSession()
+  const pathname = usePathname()
   const [showMenu, setShowMenu] = useState(false)
+  const [cartCount, setCartCount] = useState(0)
   const isLoggedIn = status === 'authenticated'
   const isAdmin = session?.user?.role === 'ADMIN'
+
+  useEffect(() => {
+    if (isLoggedIn) {
+      fetchCartCount()
+    } else {
+      setCartCount(0)
+    }
+  }, [isLoggedIn, pathname])
+
+  const fetchCartCount = async () => {
+    try {
+      const res = await fetch('/api/cart')
+      if (res.ok) {
+        const data = await res.json()
+        setCartCount(data.length)
+      }
+    } catch {
+      setCartCount(0)
+    }
+  }
 
   return (
     <header className="sticky top-0 z-[100] h-14 md:h-16 bg-white/90 backdrop-blur-xl border-b border-gray-100 shadow-sm">
@@ -33,21 +50,22 @@ export function OrangeTopHeader() {
 
         {/* 우측 액션 */}
         <div className="flex items-center gap-2">
-          {/* 장바구니 - 항상 표시 */}
+          {/* 장바구니 */}
           <Link
             href="/cart"
             className="relative w-10 h-10 flex items-center justify-center rounded-full hover:bg-gray-100 transition-colors"
             aria-label="장바구니"
           >
             <span className="text-xl">🛒</span>
-            <span className="absolute top-1 right-1 w-4 h-4 bg-yellow-400 rounded-full text-[10px] font-bold text-gray-900 flex items-center justify-center">
-              2
-            </span>
+            {cartCount > 0 && (
+              <span className="absolute top-1 right-1 w-4 h-4 bg-yellow-400 rounded-full text-[10px] font-bold text-gray-900 flex items-center justify-center">
+                {cartCount > 99 ? '99' : cartCount}
+              </span>
+            )}
           </Link>
 
           {isLoggedIn ? (
             <>
-              {/* 관리자 버튼 - ADMIN만 표시 */}
               {isAdmin && (
                 <Link
                   href="/admin"
@@ -57,7 +75,6 @@ export function OrangeTopHeader() {
                 </Link>
               )}
 
-              {/* 프로필 메뉴 */}
               <div className="relative">
                 <button
                   onClick={() => setShowMenu(!showMenu)}
@@ -76,7 +93,6 @@ export function OrangeTopHeader() {
                   )}
                 </button>
 
-                {/* 드롭다운 메뉴 */}
                 {showMenu && (
                   <>
                     <div

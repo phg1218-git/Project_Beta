@@ -19,7 +19,7 @@ export default async function ProductsPage() {
   const products = await getProducts()
 
   return (
-    <div className="page-enter">
+    <div className="min-h-screen pb-20">
       <div className="px-4 py-5 bg-white border-b border-gray-200">
         <h1 className="text-xl font-bold">🍊 전체 상품</h1>
         <p className="text-sm text-gray-500 mt-1">
@@ -36,7 +36,7 @@ export default async function ProductsPage() {
             </p>
           </div>
         ) : (
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 md:gap-4">
             {products.map((product, index) => (
               <ProductCard key={product.id} product={product} index={index} />
             ))}

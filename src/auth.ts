@@ -1,12 +1,7 @@
-// src/auth.ts
-// Auth.js v5 (NextAuth beta) 설정
-// JWT 세션 전략 사용 (Edge Runtime 호환)
-
 import NextAuth from 'next-auth'
 import Google from 'next-auth/providers/google'
 import Naver from 'next-auth/providers/naver'
 
-// 관리자 이메일 목록 - 해당 이메일은 자동으로 ADMIN 권한 부여
 const ADMIN_EMAILS = ['dnffkffk486@gmail.com']
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
@@ -24,15 +19,21 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     strategy: 'jwt',
   },
   callbacks: {
-    async jwt({ token, user }) {
+    async jwt({ token, user, trigger, session }) {
       if (user) {
         token.id = user.id
         token.email = user.email
         token.name = user.name
         token.image = user.image
         token.role = ADMIN_EMAILS.includes(user.email || '') ? 'ADMIN' : 'USER'
-        token.profileComplete = true
+        token.profileComplete = false
       }
+
+      // update() 호출 시 전달된 데이터로 갱신
+      if (trigger === 'update' && session?.profileComplete !== undefined) {
+        token.profileComplete = session.profileComplete
+      }
+
       return token
     },
     async session({ session, token }) {

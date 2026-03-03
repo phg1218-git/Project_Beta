@@ -67,7 +67,7 @@ export default function ProfilePage() {
       {/* 메뉴 */}
       <MenuSection title="내 정보">
         <MenuItem icon="👤" label="회원정보 수정" href="/profile/edit" />
-        <MenuItem icon="📍" label="배송지 관리" href="/profile/address" />
+        <MenuItem icon="📦" label="배송지 관리" href="/profile/shipping" />
       </MenuSection>
 
       <MenuSection title="쇼핑">

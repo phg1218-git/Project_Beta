@@ -1,11 +1,7 @@
-// middleware.ts
-// Edge Runtime 호환 미들웨어
-// Prisma 사용 불가 → JWT 세션만 체크
-
 import { auth } from '@/auth'
 import { NextResponse } from 'next/server'
 
-export default auth((req) => {
+export default auth(async (req) => {
   const { nextUrl, auth: session } = req
   const pathname = nextUrl.pathname
 
@@ -36,11 +32,23 @@ export default auth((req) => {
     }
   }
 
-  // 비로그인 사용자가 비공개 경로 접근 시
+  // 비로그인 사용자 비공개 경로 접근 시
   if (!isLoggedIn && !isPublicPath) {
     const loginUrl = new URL('/login', nextUrl.origin)
     loginUrl.searchParams.set('callbackUrl', pathname)
     return NextResponse.redirect(loginUrl)
+  }
+
+  // 로그인 했지만 프로필 미완성 → /profile/setup으로 강제 이동
+  // (profile/setup 페이지 내부에서 DB 체크 후 이미 정보 있으면 메인으로 보냄)
+  if (isLoggedIn && !session?.user?.profileComplete) {
+    const allowedPaths = ['/profile/setup', '/login', '/', '/products']
+    const isAllowed = allowedPaths.some(
+      (p) => pathname === p || pathname.startsWith(p + '/')
+    )
+    if (!isAllowed) {
+      return NextResponse.redirect(new URL('/profile/setup', nextUrl.origin))
+    }
   }
 
   return NextResponse.next()
