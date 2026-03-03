@@ -40,15 +40,16 @@ export default auth(async (req) => {
   }
 
   // 로그인 했지만 프로필 미완성 → /profile/setup으로 강제 이동
-  // (profile/setup 페이지 내부에서 DB 체크 후 이미 정보 있으면 메인으로 보냄)
   if (isLoggedIn && !session?.user?.profileComplete) {
-    const allowedPaths = ['/profile/setup', '/login', '/', '/products']
-    const isAllowed = allowedPaths.some(
-      (p) => pathname === p || pathname.startsWith(p + '/')
-    )
-    if (!isAllowed) {
+    // /profile/setup과 /login 경로만 통과, 나머지는 모두 /profile/setup으로 리다이렉트
+    if (pathname !== '/profile/setup' && pathname !== '/login') {
       return NextResponse.redirect(new URL('/profile/setup', nextUrl.origin))
     }
+  }
+
+  // 프로필 완성된 사용자가 /profile/setup 접근 시 메인으로 리다이렉트
+  if (isLoggedIn && session?.user?.profileComplete && pathname === '/profile/setup') {
+    return NextResponse.redirect(new URL('/products', nextUrl.origin))
   }
 
   return NextResponse.next()

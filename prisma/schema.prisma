@@ -68,6 +68,7 @@ model User {
   sessions          Session[]
   orders            Order[]
   shippingAddresses ShippingAddress[]
+  cartItems         CartItem[]
 }
 
 // ── 배송지 관리 모델 ──
@@ -173,6 +174,7 @@ model CartItem {
   quantity  Int      @default(1)
   createdAt DateTime @default(now())
 
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
   product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
 
   @@unique([userId, productId])
