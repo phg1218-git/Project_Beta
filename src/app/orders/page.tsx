@@ -1,124 +1,72 @@
+import { auth } from '@/auth'
+import { prisma } from '@/lib/prisma'
+import { redirect } from 'next/navigation'
 import { OrderStatusBadge } from '@/components/OrderStatusBadge'
-import type { OrderStatus } from '@/types'
+import { formatPrice } from '@/lib/utils'
 
-const MOCK_ORDERS = [
-  {
-    id: 'ord-1',
-    createdAt: '2025. 01. 15',
-    orderNo: '#ORD-2025011500123',
-    productName: '제주 황금 노지귤 5kg × 2',
-    totalAmount: 37800,
-    status: 'SHIPPING' as OrderStatus,
-  },
-  {
-    id: 'ord-2',
-    createdAt: '2025. 01. 10',
-    orderNo: '#ORD-2025011000087',
-    productName: '천혜향 프리미엄 3kg × 1',
-    totalAmount: 32000,
-    status: 'DRAFT' as OrderStatus,
-  },
-  {
-    id: 'ord-3',
-    createdAt: '2025. 01. 03',
-    orderNo: '#ORD-2025010300042',
-    productName: '레드향 10kg × 1',
-    totalAmount: 45000,
-    status: 'DELIVERED' as OrderStatus,
-  },
-]
+export const dynamic = 'force-dynamic'
 
-export default function OrdersPage() {
+async function getOrders(userId: string) {
+  try {
+    return await prisma.order.findMany({
+      where: { userId },
+      include: { items: { include: { product: true } } },
+      orderBy: { createdAt: 'desc' },
+    })
+  } catch {
+    return []
+  }
+}
+
+export default async function OrdersPage() {
+  const session = await auth()
+  if (!session?.user?.id) redirect('/login')
+
+  const orders = await getOrders(session.user.id)
+
   return (
     <div className="page-enter">
-      <div
-        style={{
-          padding: '20px 16px 12px',
-          background: 'white',
-          borderBottom: '1px solid var(--neutral-200)',
-        }}
-      >
-        <h1 style={{ fontSize: 22, fontWeight: 800 }}>📦 주문 내역</h1>
-        <p style={{ fontSize: 13, color: 'var(--text-secondary)', marginTop: 4 }}>
-          최근 주문을 확인하세요
-        </p>
+      <div className="px-4 py-5 bg-white border-b border-gray-200">
+        <h1 className="text-xl font-bold">📦 주문 내역</h1>
+        <p className="text-sm text-gray-500 mt-1">최근 주문을 확인하세요</p>
       </div>
 
-      <div style={{ padding: '12px 16px 0' }}>
-        {MOCK_ORDERS.length === 0 ? (
-          <div style={{ textAlign: 'center', padding: '64px 0' }}>
-            <div style={{ fontSize: 48, marginBottom: 16 }}>📦</div>
-            <p style={{ color: 'var(--text-secondary)' }}>
-              아직 주문 내역이 없어요. 첫 주문을 해보세요!
+      <div className="p-4">
+        {orders.length === 0 ? (
+          <div className="text-center py-16">
+            <div className="text-5xl mb-4">📦</div>
+            <p className="text-gray-500">
+              아직 주문 내역이 없어요.<br />첫 주문을 해보세요!
             </p>
           </div>
         ) : (
-          MOCK_ORDERS.map((order) => (
+          orders.map((order) => (
             <div
               key={order.id}
-              style={{
-                background: 'white',
-                borderRadius: 'var(--radius-card)',
-                boxShadow: 'var(--shadow-card)',
-                padding: 16,
-                marginBottom: 10,
-              }}
+              className="bg-white rounded-2xl shadow-sm p-4 mb-3"
             >
-              <div
-                style={{
-                  display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                  marginBottom: 12, paddingBottom: 12,
-                  borderBottom: '1px solid var(--neutral-100)',
-                }}
-              >
+              <div className="flex items-center justify-between mb-3 pb-3 border-b border-gray-100">
                 <div>
-                  <div style={{ fontSize: 12, color: 'var(--text-secondary)' }}>{order.createdAt}</div>
-                  <div style={{ fontSize: 12, color: 'var(--text-secondary)' }}>{order.orderNo}</div>
+                  <p className="text-xs text-gray-500">
+                    {new Date(order.createdAt).toLocaleDateString('ko-KR')}
+                  </p>
                 </div>
                 <OrderStatusBadge status={order.status} />
               </div>
-
-              <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 4 }}>{order.productName}</div>
-              <div style={{ fontSize: 16, fontWeight: 800, color: 'var(--primary)' }}>
-                {order.totalAmount.toLocaleString()}원
+              <div className="text-sm text-gray-700 mb-2">
+                {order.items.map((item) => (
+                  <p key={item.id}>
+                    {item.product.name} × {item.quantity}
+                  </p>
+                ))}
               </div>
-
-              {/* 상태별 액션 버튼 */}
-              <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
-                {order.status === 'DRAFT' && (
-                  <>
-                    <ActionBtn label="주문 수정" variant="outline" />
-                    <ActionBtn label="주문 취소" variant="outline" />
-                    <ActionBtn label="입금확인 요청" variant="primary" />
-                  </>
-                )}
-                {(order.status === 'SHIPPING' || order.status === 'DELIVERED') && (
-                  <ActionBtn label="배송 조회" variant="outline" />
-                )}
-              </div>
+              <p className="text-lg font-bold text-orange-500">
+                {formatPrice(order.totalAmount)}
+              </p>
             </div>
           ))
         )}
       </div>
     </div>
-  )
-}
-
-function ActionBtn({ label, variant }: { label: string; variant: 'outline' | 'primary' }) {
-  const isPrimary = variant === 'primary'
-  return (
-    <button
-      style={{
-        flex: 1, padding: '9px 0',
-        borderRadius: 10, fontSize: 13, fontWeight: 700,
-        cursor: 'pointer',
-        background: isPrimary ? 'var(--primary)' : 'white',
-        color: isPrimary ? 'white' : 'var(--text-primary)',
-        border: isPrimary ? 'none' : '1.5px solid var(--neutral-200)',
-        fontFamily: 'inherit',
-      }}
-    >
-      {label}
-    </button>
   )
 }

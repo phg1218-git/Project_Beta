@@ -1,32 +1,51 @@
 // middleware.ts
-// 설계문서 6-4 기반
-// - 비로그인: 메인·로그인만 접근 가능
-// - 로그인 + 프로필 미완성: /profile/setup 리다이렉트
-// - ADMIN: /admin/* 접근 가능
+// Edge Runtime 호환 미들웨어
+// Prisma 사용 불가 → JWT 세션만 체크
 
-export { auth as default } from '@/auth'
-
+import { auth } from '@/auth'
 import { NextResponse } from 'next/server'
-import type { NextRequest } from 'next/server'
 
-// NOTE: auth() wrapper를 사용하는 실제 구현은 auth.ts 설정 후 아래처럼 교체:
-//
-// import { auth } from '@/auth'
-// export default auth((req) => {
-//   const { nextUrl, auth: session } = req
-//   const isLoggedIn = !!session
-//   const isProfileSetup = nextUrl.pathname === '/profile/setup'
-//   const isPublic = ['/', '/login', '/products'].some(p => nextUrl.pathname.startsWith(p))
-//
-//   if (!isLoggedIn && !isPublic) return NextResponse.redirect(new URL('/login', nextUrl))
-//   if (isLoggedIn && !session?.user?.profileComplete && !isProfileSetup && !isPublic)
-//     return NextResponse.redirect(new URL('/profile/setup', nextUrl))
-//   if (nextUrl.pathname.startsWith('/admin') && session?.user?.role !== 'ADMIN')
-//     return NextResponse.redirect(new URL('/products', nextUrl))
-//
-//   return NextResponse.next()
-// })
+export default auth((req) => {
+  const { nextUrl, auth: session } = req
+  const pathname = nextUrl.pathname
+
+  // 정적 파일 및 API 제외
+  if (
+    pathname.startsWith('/_next') ||
+    pathname.startsWith('/api') ||
+    pathname.includes('.')
+  ) {
+    return NextResponse.next()
+  }
+
+  // 공개 경로
+  const publicPaths = ['/', '/login', '/products']
+  const isPublicPath = publicPaths.some(
+    (path) => pathname === path || pathname.startsWith(path + '/')
+  )
+
+  const isLoggedIn = !!session?.user
+
+  // 관리자 페이지 접근 제어
+  if (pathname.startsWith('/admin')) {
+    if (!isLoggedIn) {
+      return NextResponse.redirect(new URL('/login', nextUrl.origin))
+    }
+    if (session?.user?.role !== 'ADMIN') {
+      return NextResponse.redirect(new URL('/', nextUrl.origin))
+    }
+  }
+
+  // 비로그인 사용자가 비공개 경로 접근 시
+  if (!isLoggedIn && !isPublicPath) {
+    const loginUrl = new URL('/login', nextUrl.origin)
+    loginUrl.searchParams.set('callbackUrl', pathname)
+    return NextResponse.redirect(loginUrl)
+  }
+
+  return NextResponse.next()
+})
 
 export const config = {
-  matcher: ['/((?!api|_next/static|_next/image|favicon.ico).*)'],
+  matcher: ['/((?!_next/static|_next/image|favicon.ico|.*\\..*).*)'],
 }

@@ -1,45 +1,54 @@
 'use client'
 
-import { usePathname } from 'next/navigation'
 import Link from 'next/link'
-
-// CitrusBottomTabBar
-// ✅ position: fixed + z-index: 200 → 모바일/데스크탑 모두 항상 표시
-// ✅ padding-bottom: env(safe-area-inset-bottom) → 아이폰 홈바 영역 보호
-// ✅ 데스크탑에서 숨기지 않음 (display:none 미적용)
+import { usePathname } from 'next/navigation'
+import { useState, useEffect } from 'react'
+import { useSession } from 'next-auth/react'
 
 const TABS = [
-  { href: '/products', label: '상품조회', icon: '🍊' },
-  { href: '/cart',     label: '장바구니', icon: '🛒', badge: 2 },
-  { href: '/orders',   label: '주문조회', icon: '📦' },
-  { href: '/profile',  label: '프로필수정', icon: '👤' },
-] as const
+  { href: '/', label: '홈', icon: '🏠' },
+  { href: '/products', label: '상품', icon: '🍊' },
+  { href: '/cart', label: '장바구니', icon: '🛒' },
+  { href: '/orders', label: '주문조회', icon: '📦' },
+]
 
 export function CitrusBottomTabBar() {
   const pathname = usePathname()
+  const { data: session } = useSession()
+  const [cartCount, setCartCount] = useState(0)
+
+  useEffect(() => {
+    if (session?.user) {
+      fetchCartCount()
+    } else {
+      setCartCount(0)
+    }
+  }, [session, pathname])
+
+  const fetchCartCount = async () => {
+    try {
+      const res = await fetch('/api/cart')
+      if (res.ok) {
+        const data = await res.json()
+        setCartCount(data.length)
+      }
+    } catch {
+      setCartCount(0)
+    }
+  }
+
+  // 관리자 페이지에서는 숨김
+  if (pathname.startsWith('/admin')) {
+    return null
+  }
 
   return (
     <nav
       role="navigation"
       aria-label="하단 탭 메뉴"
+      className="fixed bottom-0 left-0 right-0 h-16 bg-white/95 backdrop-blur-xl border-t border-gray-200 flex z-[200] shadow-[0_-4px_20px_rgba(0,0,0,0.06)]"
       style={{
-        /* ✅ fixed로 항상 화면 하단에 고정 */
-        position: 'fixed',
-        bottom: 0,
-        left: 0,
-        right: 0,
-        /* ✅ 탭바 자체 높이는 64px 고정 */
-        height: 'var(--bottom-nav-height)',
-        /* ✅ iPhone safe-area: 홈바 영역만큼 내부 padding 추가 */
         paddingBottom: 'env(safe-area-inset-bottom, 0px)',
-        background: 'rgba(255,255,255,0.97)',
-        backdropFilter: 'blur(12px)',
-        WebkitBackdropFilter: 'blur(12px)',
-        borderTop: '1px solid var(--neutral-200)',
-        display: 'flex',
-        /* ✅ z-index: 200 → 헤더(100), cart-sticky(150)보다 위 */
-        zIndex: 200,
-        boxShadow: '0 -4px 20px rgba(0,0,0,0.06)',
       }}
     >
       {TABS.map((tab) => {
@@ -53,70 +62,37 @@ export function CitrusBottomTabBar() {
             href={tab.href}
             aria-label={tab.label}
             aria-current={isActive ? 'page' : undefined}
-            style={{
-              flex: 1,
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: 3,
-              position: 'relative',
-              textDecoration: 'none',
-              padding: '6px 0',
-              WebkitTapHighlightColor: 'transparent',
-            }}
+            className="flex-1 flex flex-col items-center justify-center gap-1 relative no-underline"
           >
-            {/* Active 인디케이터 (상단 줄) */}
+            {/* Active 인디케이터 */}
             <div
-              style={{
-                position: 'absolute',
-                top: 0, left: '50%',
-                transform: 'translateX(-50%)',
-                width: 32, height: 3,
-                background: isActive ? 'var(--primary)' : 'transparent',
-                borderRadius: '0 0 4px 4px',
-                transition: 'background 0.2s',
-              }}
+              className={`absolute top-0 left-1/2 -translate-x-1/2 w-8 h-[3px] rounded-b transition-colors ${
+                isActive ? 'bg-orange-500' : 'bg-transparent'
+              }`}
             />
 
             {/* 아이콘 */}
             <span
-              style={{
-                fontSize: 22,
-                lineHeight: 1,
-                transform: isActive ? 'scale(1.12)' : 'scale(1)',
-                transition: 'transform 0.2s',
-                position: 'relative',
-              }}
+              className={`text-[22px] leading-none relative transition-transform ${
+                isActive ? 'scale-110' : 'scale-100'
+              }`}
             >
               {tab.icon}
               {/* 장바구니 뱃지 */}
-              {'badge' in tab && tab.badge && tab.badge > 0 && (
-                <span
-                  style={{
-                    position: 'absolute',
-                    top: -2, right: -8,
-                    width: 17, height: 17,
-                    background: 'var(--secondary)',
-                    borderRadius: '50%',
-                    fontSize: 10, fontWeight: 800, color: '#1A1A1A',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    border: '2px solid white',
-                  }}
-                >
-                  {tab.badge}
+              {tab.href === '/cart' && cartCount > 0 && (
+                <span className="absolute -top-0.5 -right-2 w-[17px] h-[17px] bg-yellow-400 rounded-full text-[10px] font-extrabold text-gray-900 flex items-center justify-center border-2 border-white">
+                  {cartCount > 99 ? '99' : cartCount}
                 </span>
               )}
             </span>
 
             {/* 라벨 */}
             <span
-              style={{
-                fontSize: 10,
-                fontWeight: isActive ? 800 : 600,
-                color: isActive ? 'var(--primary)' : 'var(--text-secondary)',
-                transition: 'color 0.2s',
-              }}
+              className={`text-[10px] transition-colors ${
+                isActive
+                  ? 'font-extrabold text-orange-500'
+                  : 'font-semibold text-gray-500'
+              }`}
             >
               {tab.label}
             </span>

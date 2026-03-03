@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from 'next'
 import '@/styles/globals.css'
 import { OrangeTopHeader } from '@/components/OrangeTopHeader'
 import { CitrusBottomTabBar } from '@/components/CitrusBottomTabBar'
+import { SessionProvider } from 'next-auth/react'
 
 export const metadata: Metadata = {
   title: '오늘의귤 🍊',
@@ -30,14 +31,16 @@ export default function RootLayout({
         />
       </head>
       <body>
-        {/* 상단 헤더 */}
-        <OrangeTopHeader />
+        <SessionProvider>
+          {/* 상단 헤더 */}
+          <OrangeTopHeader />
 
-        {/* 페이지 콘텐츠 */}
-        <main>{children}</main>
+          {/* 페이지 콘텐츠 */}
+          <main>{children}</main>
 
-        {/* 하단 탭바: 모바일/데스크탑 모두 표시 */}
-        <CitrusBottomTabBar />
+          {/* 하단 탭바: 모바일/데스크탑 모두 표시 */}
+          <CitrusBottomTabBar />
+        </SessionProvider>
       </body>
     </html>
   )
