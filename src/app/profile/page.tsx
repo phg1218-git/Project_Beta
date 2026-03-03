@@ -38,30 +38,34 @@ export default function ProfilePage() {
     <div className="page-enter pb-24">
       {/* 프로필 헤더 */}
       <div
-        className="px-5 pt-8 pb-6 text-white"
+        className="px-5 pt-6 pb-6 text-white"
         style={{
           background: 'linear-gradient(135deg, #FF8A00 0%, #FFC94A 100%)',
         }}
       >
-        <div className="w-17 h-17 rounded-full bg-white/25 flex items-center justify-center mb-3">
-          {session.user.image ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={session.user.image}
-              alt="프로필"
-              className="w-16 h-16 rounded-full object-cover"
-            />
-          ) : (
-            <span className="text-3xl">👤</span>
-          )}
+        <div className="flex items-center gap-4">
+          <div className="w-16 h-16 rounded-full bg-white/25 flex items-center justify-center">
+            {session.user.image ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={session.user.image}
+                alt="프로필"
+                className="w-14 h-14 rounded-full object-cover"
+              />
+            ) : (
+              <span className="text-3xl">👤</span>
+            )}
+          </div>
+          <div>
+            <div className="text-xl font-bold">{session.user.name || '회원'}</div>
+            <div className="text-sm opacity-85">{session.user.email}</div>
+            {session.user.role === 'ADMIN' && (
+              <span className="inline-block mt-1 px-2 py-0.5 bg-white/20 rounded-full text-xs font-semibold">
+                관리자
+              </span>
+            )}
+          </div>
         </div>
-        <div className="text-xl font-bold mb-1">{session.user.name || '회원'}</div>
-        <div className="text-sm opacity-85">{session.user.email}</div>
-        {session.user.role === 'ADMIN' && (
-          <span className="inline-block mt-2 px-3 py-1 bg-white/20 rounded-full text-xs font-semibold">
-            관리자
-          </span>
-        )}
       </div>
 
       {/* 메뉴 */}

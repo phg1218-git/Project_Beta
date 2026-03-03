@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useSession } from 'next-auth/react'
+import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { formatPrice } from '@/lib/utils'
 
@@ -11,14 +12,17 @@ interface CartItem {
   productName: string
   price: number
   quantity: number
+  stock: number
   imageUrl?: string | null
 }
 
 export default function CartPage() {
   const { data: session } = useSession()
+  const router = useRouter()
   const [items, setItems] = useState<CartItem[]>([])
   const [loading, setLoading] = useState(true)
   const [selectedIds, setSelectedIds] = useState<string[]>([])
+  const [isOrdering, setIsOrdering] = useState(false)
 
   useEffect(() => {
     fetchCart()
@@ -30,6 +34,8 @@ export default function CartPage() {
       if (res.ok) {
         const data = await res.json()
         setItems(data)
+        // 기본적으로 모든 상품 선택
+        setSelectedIds(data.map((item: CartItem) => item.id))
       }
     } catch (error) {
       console.error('장바구니 조회 실패:', error)
@@ -42,8 +48,8 @@ export default function CartPage() {
     const item = items.find((i) => i.id === id)
     if (!item) return
 
-    const newQty = Math.max(1, Math.min(99, item.quantity + delta))
-    
+    const newQty = Math.max(1, Math.min(item.stock, item.quantity + delta))
+
     try {
       await fetch(`/api/cart/${id}`, {
         method: 'PATCH',
@@ -113,7 +119,60 @@ export default function CartPage() {
     }
   }
 
-  const total = items.reduce((sum, item) => sum + item.price * item.quantity, 0)
+  // 선택된 상품들의 총액 계산
+  const selectedItems = items.filter((item) => selectedIds.includes(item.id))
+  const total = selectedItems.reduce((sum, item) => sum + item.price * item.quantity, 0)
+
+  // 주문하기
+  const handleOrder = async () => {
+    if (selectedIds.length === 0) {
+      alert('주문할 상품을 선택해주세요.')
+      return
+    }
+
+    if (!session?.user?.profileComplete) {
+      alert('배송 정보를 먼저 등록해주세요.')
+      router.push('/profile/setup')
+      return
+    }
+
+    setIsOrdering(true)
+
+    try {
+      // 선택된 장바구니 아이템으로 주문 생성
+      const orderItems = selectedItems.map((item) => ({
+        productId: item.productId,
+        quantity: item.quantity,
+        // 기본 배송지 정보 사용 (서버에서 처리)
+      }))
+
+      const res = await fetch('/api/orders', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          items: orderItems,
+          fromCart: true,
+          cartItemIds: selectedIds,
+        }),
+      })
+
+      const data = await res.json()
+
+      if (!res.ok) {
+        alert(data.error || '주문 생성에 실패했습니다.')
+        return
+      }
+
+      // 주문 성공 시 주문 상세 페이지로 이동
+      alert('주문이 생성되었습니다! 입금 후 입금확인 요청을 해주세요.')
+      router.push(`/orders/${data.id}`)
+    } catch (error) {
+      console.error('주문 생성 오류:', error)
+      alert('주문 생성 중 오류가 발생했습니다.')
+    } finally {
+      setIsOrdering(false)
+    }
+  }
 
   if (loading) {
     return (
@@ -144,8 +203,9 @@ export default function CartPage() {
   }
 
   return (
-    <div className="page-enter pb-40">
-      <div className="px-4 py-5 bg-white border-b border-gray-200">
+    <div className="page-enter pb-36">
+      {/* 페이지 헤더 */}
+      <div className="px-4 py-4 bg-white border-b border-gray-200">
         <h1 className="text-xl font-bold">🛒 장바구니</h1>
         <p className="text-sm text-gray-500 mt-1">{items.length}개 상품</p>
       </div>
@@ -182,13 +242,15 @@ export default function CartPage() {
         {items.map((item) => (
           <div
             key={item.id}
-            className="bg-white rounded-2xl shadow-sm p-4 flex gap-3 mb-3"
+            className={`bg-white rounded-2xl shadow-sm p-4 flex gap-3 mb-3 border-2 transition-colors ${
+              selectedIds.includes(item.id) ? 'border-orange-200' : 'border-transparent'
+            }`}
           >
             <input
               type="checkbox"
               checked={selectedIds.includes(item.id)}
               onChange={() => toggleSelect(item.id)}
-              className="w-4 h-4 rounded mt-1"
+              className="w-4 h-4 rounded mt-1 accent-orange-500"
             />
             <div className="w-16 h-16 bg-gradient-to-br from-orange-100 to-yellow-100 rounded-xl flex items-center justify-center text-2xl shrink-0">
               🍊
@@ -206,20 +268,23 @@ export default function CartPage() {
               <p className="text-orange-500 font-bold mt-1">
                 {formatPrice(item.price * item.quantity)}
               </p>
-              <div className="flex items-center gap-2 mt-2 bg-gray-100 rounded-lg px-2 py-1 w-fit">
-                <button
-                  onClick={() => updateQty(item.id, -1)}
-                  className="w-7 h-7 flex items-center justify-center text-orange-500 font-bold"
-                >
-                  −
-                </button>
-                <span className="w-6 text-center font-semibold">{item.quantity}</span>
-                <button
-                  onClick={() => updateQty(item.id, 1)}
-                  className="w-7 h-7 flex items-center justify-center text-orange-500 font-bold"
-                >
-                  +
-                </button>
+              <div className="flex items-center justify-between mt-2">
+                <div className="flex items-center gap-2 bg-gray-100 rounded-lg px-2 py-1">
+                  <button
+                    onClick={() => updateQty(item.id, -1)}
+                    className="w-7 h-7 flex items-center justify-center text-orange-500 font-bold"
+                  >
+                    −
+                  </button>
+                  <span className="w-6 text-center font-semibold">{item.quantity}</span>
+                  <button
+                    onClick={() => updateQty(item.id, 1)}
+                    className="w-7 h-7 flex items-center justify-center text-orange-500 font-bold"
+                  >
+                    +
+                  </button>
+                </div>
+                <span className="text-xs text-gray-400">재고 {item.stock}개</span>
               </div>
             </div>
           </div>
@@ -227,14 +292,33 @@ export default function CartPage() {
       </div>
 
       {/* 하단 결제바 */}
-      <div className="fixed bottom-16 left-0 right-0 bg-white border-t border-gray-200 px-4 py-3 flex items-center justify-between z-[150] shadow-lg">
-        <div>
-          <p className="text-xs text-gray-500">총 결제금액</p>
-          <p className="text-xl font-bold">{formatPrice(total)}</p>
+      <div className="fixed bottom-[calc(64px+env(safe-area-inset-bottom))] left-0 right-0 bg-white border-t border-gray-200 px-4 py-3 z-[150] shadow-lg">
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="text-xs text-gray-500">
+              선택 {selectedIds.length}개 상품
+            </p>
+            <p className="text-xl font-bold">{formatPrice(total)}</p>
+          </div>
+          <button
+            onClick={handleOrder}
+            disabled={isOrdering || selectedIds.length === 0}
+            className={`px-6 py-3 font-bold rounded-xl transition-all ${
+              isOrdering || selectedIds.length === 0
+                ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                : 'bg-orange-500 text-white hover:bg-orange-600 active:scale-95'
+            }`}
+          >
+            {isOrdering ? (
+              <span className="flex items-center gap-2">
+                <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                처리 중...
+              </span>
+            ) : (
+              '주문하기'
+            )}
+          </button>
         </div>
-        <button className="px-6 py-3 bg-orange-500 text-white font-bold rounded-xl">
-          주문하기
-        </button>
       </div>
     </div>
   )

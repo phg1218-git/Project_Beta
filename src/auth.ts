@@ -20,11 +20,91 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     strategy: 'jwt',
   },
   callbacks: {
-    async jwt({ token, user, trigger, session }) {
-      if (user) {
-        // 새로운 로그인 또는 토큰 생성 시 DB에서 실제 프로필 정보 조회
+    async signIn({ user, account }) {
+      if (!account || !user.email) return true
+
+      try {
+        const isAdmin = ADMIN_EMAILS.includes(user.email)
+
+        const existingUser = await prisma.user.findUnique({
+          where: { email: user.email },
+        })
+
+        if (!existingUser) {
+          // 새 사용자 생성
+          const newUser = await prisma.user.create({
+            data: {
+              email: user.email,
+              name: user.name,
+              image: user.image,
+              role: isAdmin ? 'ADMIN' : 'USER',
+              profileComplete: false,
+            },
+          })
+
+          // Account 연결
+          await prisma.account.create({
+            data: {
+              userId: newUser.id,
+              type: account.type,
+              provider: account.provider,
+              providerAccountId: account.providerAccountId,
+              access_token: account.access_token,
+              refresh_token: account.refresh_token,
+              expires_at: account.expires_at,
+              token_type: account.token_type,
+              scope: account.scope,
+              id_token: account.id_token,
+            },
+          })
+        } else {
+          // 기존 사용자: 관리자 이메일이면 role 업데이트
+          if (isAdmin && existingUser.role !== 'ADMIN') {
+            await prisma.user.update({
+              where: { id: existingUser.id },
+              data: { role: 'ADMIN' },
+            })
+          }
+
+          // Account 연결 확인
+          const existingAccount = await prisma.account.findUnique({
+            where: {
+              provider_providerAccountId: {
+                provider: account.provider,
+                providerAccountId: account.providerAccountId,
+              },
+            },
+          })
+
+          if (!existingAccount) {
+            await prisma.account.create({
+              data: {
+                userId: existingUser.id,
+                type: account.type,
+                provider: account.provider,
+                providerAccountId: account.providerAccountId,
+                access_token: account.access_token,
+                refresh_token: account.refresh_token,
+                expires_at: account.expires_at,
+                token_type: account.token_type,
+                scope: account.scope,
+                id_token: account.id_token,
+              },
+            })
+          }
+        }
+      } catch (error) {
+        console.error('사용자 생성/조회 오류:', error)
+      }
+
+      return true
+    },
+
+    async jwt({ token, user, account, trigger, session }) {
+      // 최초 로그인 시 또는 토큰 생성 시
+      if (account && user?.email) {
         const dbUser = await prisma.user.findUnique({
-          where: { id: user.id },
+          where: { email: user.email },
           select: {
             id: true,
             email: true,
@@ -47,28 +127,33 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           token.addressBase = dbUser.addressBase
           token.addressDetail = dbUser.addressDetail
           token.profileComplete = dbUser.profileComplete
-          token.role = ADMIN_EMAILS.includes(dbUser.email || '') ? 'ADMIN' : 'USER'
+          // DB에서 role 가져오되, ADMIN_EMAILS에 포함되면 ADMIN으로 강제 설정
+          token.role = ADMIN_EMAILS.includes(dbUser.email || '') ? 'ADMIN' : dbUser.role
         }
       }
 
       // update() 호출 시 전달된 데이터로 갱신
-      if (trigger === 'update') {
-        if (session?.profileComplete !== undefined) {
+      if (trigger === 'update' && session) {
+        if (session.profileComplete !== undefined) {
           token.profileComplete = session.profileComplete
         }
-        if (session?.phone !== undefined) {
+        if (session.phone !== undefined) {
           token.phone = session.phone
         }
-        if (session?.addressBase !== undefined) {
+        if (session.addressBase !== undefined) {
           token.addressBase = session.addressBase
         }
-        if (session?.addressDetail !== undefined) {
+        if (session.addressDetail !== undefined) {
           token.addressDetail = session.addressDetail
+        }
+        if (session.name !== undefined) {
+          token.name = session.name
         }
       }
 
       return token
     },
+
     async session({ session, token }) {
       if (token) {
         session.user.id = token.id as string
@@ -80,6 +165,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       }
       return session
     },
+
     async redirect({ url, baseUrl }) {
       if (url.startsWith(baseUrl)) return url
       if (url.startsWith('/')) return `${baseUrl}${url}`
