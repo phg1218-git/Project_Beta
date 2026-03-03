@@ -7,6 +7,23 @@ import { formatPrice } from '@/lib/utils'
 
 export const dynamic = 'force-dynamic'
 
+function getTrackingUrl(carrier: string, trackingNumber: string): string {
+  switch (carrier) {
+    case 'CJ대한통운':
+      return `https://trace.cjlogistics.com/next/tracking.html?wblNo=${trackingNumber}`
+    case '한진택배':
+      return `https://www.hanjin.co.kr/kor/CMS/DeliveryMgr/WaybillResult.do?mCode=MN038&schLang=KR&wblnumText2=${trackingNumber}`
+    case '롯데택배':
+      return `https://www.lotteglogis.com/home/reservation/tracking/index?invNo=${trackingNumber}`
+    case '우체국택배':
+      return `https://service.epost.go.kr/trace.RetrieveDomRigiTraceList.comm?sid1=${trackingNumber}`
+    case '로젠택배':
+      return `https://www.ilogen.com/web/personal/trace/${trackingNumber}`
+    default:
+      return ''
+  }
+}
+
 // 환경변수에서 계좌 정보 가져오기
 const BANK_ACCOUNT_INFO = process.env.BANK_ACCOUNT_INFO || '농협 000-0000-0000-00 (오늘의귤)'
 
@@ -129,6 +146,20 @@ export default async function OrdersPage() {
                     </p>
                   </div>
                 )}
+                {(order.status === 'SHIPPING' || order.status === 'DELIVERED') &&
+                  order.items[0]?.carrier && order.items[0]?.trackingNumber && (
+                  <div className="px-4 py-3 bg-blue-50 border-t border-blue-100">
+                    <p className="text-xs text-blue-600 font-semibold mb-1">
+                      {order.status === 'SHIPPING' ? '🚚 배송 중' : '✅ 배송 완료'}
+                    </p>
+                    <p className="text-xs text-gray-700">
+                      택배사: {order.items[0].carrier}
+                    </p>
+                    <p className="text-xs text-gray-700 font-mono mt-0.5">
+                      송장번호: {order.items[0].trackingNumber}
+                    </p>
+                  </div>
+                )}
 
                 {/* 액션 버튼 */}
                 <div className="px-4 py-3 border-t border-gray-100 flex gap-2">
@@ -149,15 +180,22 @@ export default async function OrdersPage() {
                     </Link>
                   )}
 
-                  {/* PAYMENT_CONFIRMED, SHIPPING, DELIVERED 상태: 배송조회 버튼 */}
-                  {['PAYMENT_CONFIRMED', 'SHIPPING', 'DELIVERED'].includes(order.status) && (
-                    <Link
-                      href={`/orders/${order.id}?tab=shipping`}
-                      className="flex-1 py-2.5 text-center text-sm font-semibold text-white bg-green-500 rounded-xl hover:bg-green-600 transition-colors"
-                    >
-                      배송정보 조회
-                    </Link>
-                  )}
+                  {/* SHIPPING, DELIVERED 상태: 배송추적 버튼 */}
+                  {(['SHIPPING', 'DELIVERED'] as const).includes(order.status as 'SHIPPING' | 'DELIVERED') &&
+                    order.items[0]?.carrier && order.items[0]?.trackingNumber && (() => {
+                      const url = getTrackingUrl(order.items[0].carrier!, order.items[0].trackingNumber!)
+                      return url ? (
+                        <a
+                          href={url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex-1 py-2.5 text-center text-sm font-semibold text-white bg-blue-500 rounded-xl hover:bg-blue-600 transition-colors"
+                        >
+                          배송추적
+                        </a>
+                      ) : null
+                    })()
+                  }
                 </div>
               </div>
             ))}
