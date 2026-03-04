@@ -3,7 +3,7 @@ import { auth } from '@/auth'
 
 // 메인 랜딩 페이지 - Hero Section + 브랜드 스토리 + 신뢰 요소
 export default async function HomePage() {
-  const session = await auth()
+  const session = await auth().catch(() => null)
 
   return (
     <div className="page-enter">

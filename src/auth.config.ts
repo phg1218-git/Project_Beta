@@ -5,6 +5,7 @@ import Kakao from 'next-auth/providers/kakao'
 
 // Edge Runtime 호환 설정 (Prisma 없음) - 미들웨어에서 사용
 export const authConfig: NextAuthConfig = {
+  trustHost: true,
   providers: [
     Google({
       clientId: process.env.AUTH_GOOGLE_ID ?? '',
