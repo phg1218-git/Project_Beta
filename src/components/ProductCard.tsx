@@ -54,6 +54,9 @@ export function ProductCard({ product, index = 0 }: { product: Product; index?: 
         >
           {isSoldOut ? '품절' : formatPrice(product.price)}
         </p>
+        {!isSoldOut && (
+          <p className="text-[10px] text-gray-400 mt-0.5">택배비 포함</p>
+        )}
         <p
           className={`text-xs font-semibold mt-1 ${
             isSoldOut

@@ -264,6 +264,7 @@ export default function ProductDetailPage() {
         </div>
         <div className="text-right shrink-0">
           <p className="text-xl font-extrabold text-orange-500">{formatPrice(product.price)}</p>
+          <p className="text-[11px] text-gray-400 mt-0.5">택배비 포함</p>
           {isSoldOut ? (
             <p className="text-xs text-red-500 font-semibold mt-0.5">품절</p>
           ) : product.stock <= 5 ? (
