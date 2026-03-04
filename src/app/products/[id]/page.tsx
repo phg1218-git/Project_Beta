@@ -240,9 +240,10 @@ export default function ProductDetailPage() {
   const isSoldOut = product.stock === 0
 
   return (
-    <div className="pb-32">
-      {/* 상품 이미지 */}
-      <div className="w-full aspect-square bg-gradient-to-br from-orange-100 to-yellow-100 flex items-center justify-center">
+    <div className="max-w-2xl mx-auto pb-36">
+
+      {/* 상품 이미지 — 고정 높이로 제한 */}
+      <div className="w-full h-52 sm:h-64 bg-gradient-to-br from-orange-100 to-yellow-100 flex items-center justify-center overflow-hidden">
         {product.imageUrl ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img
@@ -251,109 +252,103 @@ export default function ProductDetailPage() {
             className="w-full h-full object-cover"
           />
         ) : (
-          <span className="text-8xl">🍊</span>
+          <span className="text-7xl">🍊</span>
         )}
       </div>
 
       {/* 상품 정보 */}
-      <div className="p-4">
-        <h1 className="text-xl font-bold text-gray-900">{product.name}</h1>
-        <p className="text-2xl font-extrabold text-orange-500 mt-2">
-          {formatPrice(product.price)}
-        </p>
-        <p className="text-sm text-gray-500 mt-2">{product.description}</p>
-
-        {isSoldOut ? (
-          <p className="text-red-500 font-semibold mt-3">현재 품절입니다. 다음 수확을 기다려 주세요 🍂</p>
-        ) : product.stock <= 5 ? (
-          <p className="text-red-500 font-semibold mt-3">⚡ 곧 매진돼요! 재고 {product.stock}개</p>
-        ) : (
-          <p className="text-green-600 font-semibold mt-3">✔ 재고 {product.stock}개</p>
-        )}
+      <div className="px-4 py-3 flex items-start justify-between gap-2">
+        <div className="flex-1 min-w-0">
+          <h1 className="text-lg font-bold text-gray-900 leading-tight">{product.name}</h1>
+          <p className="text-sm text-gray-500 mt-1 line-clamp-2">{product.description}</p>
+        </div>
+        <div className="text-right shrink-0">
+          <p className="text-xl font-extrabold text-orange-500">{formatPrice(product.price)}</p>
+          {isSoldOut ? (
+            <p className="text-xs text-red-500 font-semibold mt-0.5">품절</p>
+          ) : product.stock <= 5 ? (
+            <p className="text-xs text-red-500 font-semibold mt-0.5">⚡ 잔여 {product.stock}개</p>
+          ) : (
+            <p className="text-xs text-green-600 font-semibold mt-0.5">✔ 재고 있음</p>
+          )}
+        </div>
       </div>
 
       {!isSoldOut && (
         <>
-          {/* 수량 선택 */}
-          <div className="px-4 py-3 border-t border-gray-100">
-            <div className="flex items-center justify-between">
-              <span className="font-semibold text-gray-700">수량</span>
-              <div className="flex items-center gap-3 bg-gray-100 rounded-xl px-3 py-2">
+          {/* 수량 + 수령인 헤더 한 줄 */}
+          <div className="px-4 py-2 border-t border-gray-100 flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <span className="text-sm font-semibold text-gray-700">수량</span>
+              <div className="flex items-center gap-2 bg-gray-100 rounded-lg px-2 py-1">
                 <button
                   onClick={() => setQuantity(Math.max(1, quantity - 1))}
-                  className="w-8 h-8 flex items-center justify-center text-orange-500 font-bold text-xl"
+                  className="w-7 h-7 flex items-center justify-center text-orange-500 font-bold text-lg"
                 >
                   −
                 </button>
-                <span className="w-8 text-center font-bold">{quantity}</span>
+                <span className="w-6 text-center font-bold text-sm">{quantity}</span>
                 <button
                   onClick={() => setQuantity(Math.min(product.stock, quantity + 1))}
-                  className="w-8 h-8 flex items-center justify-center text-orange-500 font-bold text-xl"
+                  className="w-7 h-7 flex items-center justify-center text-orange-500 font-bold text-lg"
                 >
                   +
                 </button>
               </div>
             </div>
+            <div className="flex items-center gap-3">
+              <button
+                onClick={openAddressModal}
+                className="text-sm text-orange-500 font-medium"
+              >
+                배송지 변경
+              </button>
+              <label className="flex items-center gap-1.5 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={isGift}
+                  onChange={handleGiftToggle}
+                  className="w-4 h-4 rounded"
+                />
+                <span className="text-sm text-gray-600">🎁 선물</span>
+              </label>
+            </div>
           </div>
 
           {/* 수령인 정보 */}
-          <div className="px-4 py-4 border-t border-gray-100">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="font-bold text-gray-900">수령인 정보</h2>
-              <div className="flex items-center gap-3">
-                <button
-                  onClick={openAddressModal}
-                  className="text-sm text-orange-500 font-medium"
-                >
-                  배송지 변경
-                </button>
-                <label className="flex items-center gap-2 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={isGift}
-                    onChange={handleGiftToggle}
-                    className="w-4 h-4 rounded"
-                  />
-                  <span className="text-sm text-gray-600">🎁 선물</span>
-                </label>
-              </div>
-            </div>
-
-            {isGift && (
-              <p className="text-sm text-orange-500 mb-3">
-                선물 받을 분의 정보를 입력해주세요
-              </p>
-            )}
-
-            <div className="space-y-3">
+          <div className="px-4 pb-3 border-t border-gray-100 pt-3">
+            <h2 className="text-sm font-bold text-gray-700 mb-2">
+              {isGift ? '🎁 선물 받을 분 정보' : '수령인 정보'}
+            </h2>
+            <div className="grid grid-cols-2 gap-2">
               <input
                 type="text"
                 value={recipient.name}
                 onChange={(e) => setRecipient({ ...recipient, name: e.target.value })}
                 placeholder="수령인 이름"
-                className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-orange-500 outline-none"
+                className="px-3 py-2.5 text-sm border border-gray-200 rounded-xl focus:ring-2 focus:ring-orange-500 outline-none"
               />
               <input
                 type="tel"
                 value={recipient.phone}
                 onChange={(e) => handlePhoneChange(e.target.value)}
-                placeholder="휴대폰 번호 (010-0000-0000)"
+                placeholder="010-0000-0000"
                 maxLength={13}
-                className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-orange-500 outline-none"
+                className="px-3 py-2.5 text-sm border border-gray-200 rounded-xl focus:ring-2 focus:ring-orange-500 outline-none"
               />
               <input
                 type="text"
                 value={recipient.addressBase}
                 onChange={(e) => setRecipient({ ...recipient, addressBase: e.target.value })}
                 placeholder="주소"
-                className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-orange-500 outline-none"
+                className="col-span-2 px-3 py-2.5 text-sm border border-gray-200 rounded-xl focus:ring-2 focus:ring-orange-500 outline-none"
               />
               <input
                 type="text"
                 value={recipient.addressDetail}
                 onChange={(e) => setRecipient({ ...recipient, addressDetail: e.target.value })}
                 placeholder="상세주소 (선택)"
-                className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-orange-500 outline-none"
+                className="col-span-2 px-3 py-2.5 text-sm border border-gray-200 rounded-xl focus:ring-2 focus:ring-orange-500 outline-none"
               />
             </div>
           </div>
@@ -371,20 +366,20 @@ export default function ProductDetailPage() {
           </button>
         ) : (
           <>
-            <div className="flex-1">
+            <div className="flex-1 min-w-0">
               <p className="text-xs text-gray-500">총 결제금액</p>
-              <p className="text-xl font-bold text-orange-500">{formatPrice(totalPrice)}</p>
+              <p className="text-lg font-bold text-orange-500">{formatPrice(totalPrice)}</p>
             </div>
             <button
               onClick={handleAddToCart}
-              className="px-4 py-3 border-2 border-orange-500 text-orange-500 font-bold rounded-xl hover:bg-orange-50"
+              className="px-4 py-3 border-2 border-orange-500 text-orange-500 font-bold rounded-xl hover:bg-orange-50 shrink-0"
             >
               🛒
             </button>
             <button
               onClick={handleOrder}
               disabled={isSubmitting}
-              className="px-6 py-3 bg-orange-500 text-white font-bold rounded-xl hover:bg-orange-600 disabled:opacity-50"
+              className="px-5 py-3 bg-orange-500 text-white font-bold rounded-xl hover:bg-orange-600 disabled:opacity-50 shrink-0"
             >
               {isSubmitting ? '주문 중...' : '바로 주문'}
             </button>
