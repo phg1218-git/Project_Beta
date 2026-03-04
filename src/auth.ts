@@ -1,6 +1,7 @@
 import NextAuth from 'next-auth'
 import Google from 'next-auth/providers/google'
 import Naver from 'next-auth/providers/naver'
+import Kakao from 'next-auth/providers/kakao'
 import { prisma } from '@/lib/prisma'
 
 const ADMIN_EMAILS = ['dnffkffk486@gmail.com']
@@ -14,6 +15,10 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     Naver({
       clientId: process.env.AUTH_NAVER_ID!,
       clientSecret: process.env.AUTH_NAVER_SECRET!,
+    }),
+    Kakao({
+      clientId: process.env.AUTH_KAKAO_ID!,
+      clientSecret: process.env.AUTH_KAKAO_SECRET!,
     }),
   ],
   session: {
