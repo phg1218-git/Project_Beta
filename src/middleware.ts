@@ -1,5 +1,9 @@
-import { auth } from '@/auth'
+import NextAuth from 'next-auth'
+import { authConfig } from '@/auth.config'
 import { NextResponse } from 'next/server'
+
+// Edge Runtime 호환: Prisma를 포함하지 않는 authConfig 사용
+const { auth } = NextAuth(authConfig)
 
 export default auth(async (req) => {
   const { nextUrl, auth: session } = req
@@ -43,14 +47,12 @@ export default auth(async (req) => {
 
   // 로그인 했지만 프로필 미완성인 경우
   if (isLoggedIn && !isProfileComplete) {
-    // /profile/setup, /login, /api 경로는 통과
     const allowedForIncompleteProfile = ['/profile/setup', '/login']
     const isAllowed = allowedForIncompleteProfile.some(
       (path) => pathname === path || pathname.startsWith(path + '/')
     )
 
     if (!isAllowed) {
-      // 프로필 설정 페이지로 리다이렉트
       return NextResponse.redirect(new URL('/profile/setup', nextUrl.origin))
     }
   }

@@ -1,30 +1,13 @@
 import NextAuth from 'next-auth'
-import Google from 'next-auth/providers/google'
-import Naver from 'next-auth/providers/naver'
-import Kakao from 'next-auth/providers/kakao'
 import { prisma } from '@/lib/prisma'
+import { authConfig } from './auth.config'
 
 const ADMIN_EMAILS = ['dnffkffk486@gmail.com']
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
-  providers: [
-    Google({
-      clientId: process.env.AUTH_GOOGLE_ID!,
-      clientSecret: process.env.AUTH_GOOGLE_SECRET!,
-    }),
-    Naver({
-      clientId: process.env.AUTH_NAVER_ID!,
-      clientSecret: process.env.AUTH_NAVER_SECRET!,
-    }),
-    Kakao({
-      clientId: process.env.AUTH_KAKAO_ID!,
-      clientSecret: process.env.AUTH_KAKAO_SECRET!,
-    }),
-  ],
-  session: {
-    strategy: 'jwt',
-  },
+  ...authConfig,
   callbacks: {
+    ...authConfig.callbacks,
     async signIn({ user, account }) {
       if (!account || !user.email) return true
 
@@ -36,7 +19,6 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         })
 
         if (!existingUser) {
-          // 새 사용자 생성
           const newUser = await prisma.user.create({
             data: {
               email: user.email,
@@ -47,7 +29,6 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
             },
           })
 
-          // Account 연결
           await prisma.account.create({
             data: {
               userId: newUser.id,
@@ -63,7 +44,6 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
             },
           })
         } else {
-          // 기존 사용자: 관리자 이메일이면 role 업데이트
           if (isAdmin && existingUser.role !== 'ADMIN') {
             await prisma.user.update({
               where: { id: existingUser.id },
@@ -71,7 +51,6 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
             })
           }
 
-          // Account 연결 확인
           const existingAccount = await prisma.account.findUnique({
             where: {
               provider_providerAccountId: {
@@ -106,7 +85,6 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     },
 
     async jwt({ token, user, account, trigger, session }) {
-      // 최초 로그인 시 또는 토큰 생성 시
       if (account && user?.email) {
         const dbUser = await prisma.user.findUnique({
           where: { email: user.email },
@@ -132,54 +110,20 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           token.addressBase = dbUser.addressBase
           token.addressDetail = dbUser.addressDetail
           token.profileComplete = dbUser.profileComplete
-          // DB에서 role 가져오되, ADMIN_EMAILS에 포함되면 ADMIN으로 강제 설정
           token.role = ADMIN_EMAILS.includes(dbUser.email || '') ? 'ADMIN' : dbUser.role
         }
       }
 
-      // update() 호출 시 전달된 데이터로 갱신
       if (trigger === 'update' && session) {
-        if (session.profileComplete !== undefined) {
-          token.profileComplete = session.profileComplete
-        }
-        if (session.phone !== undefined) {
-          token.phone = session.phone
-        }
-        if (session.addressBase !== undefined) {
-          token.addressBase = session.addressBase
-        }
-        if (session.addressDetail !== undefined) {
-          token.addressDetail = session.addressDetail
-        }
-        if (session.name !== undefined) {
-          token.name = session.name
-        }
+        if (session.profileComplete !== undefined) token.profileComplete = session.profileComplete
+        if (session.phone !== undefined) token.phone = session.phone
+        if (session.addressBase !== undefined) token.addressBase = session.addressBase
+        if (session.addressDetail !== undefined) token.addressDetail = session.addressDetail
+        if (session.name !== undefined) token.name = session.name
       }
 
       return token
     },
-
-    async session({ session, token }) {
-      if (token) {
-        session.user.id = token.id as string
-        session.user.role = token.role as 'USER' | 'ADMIN'
-        session.user.profileComplete = token.profileComplete as boolean
-        session.user.phone = token.phone as string | null | undefined
-        session.user.addressBase = token.addressBase as string | null | undefined
-        session.user.addressDetail = token.addressDetail as string | null | undefined
-      }
-      return session
-    },
-
-    async redirect({ url, baseUrl }) {
-      if (url.startsWith(baseUrl)) return url
-      if (url.startsWith('/')) return `${baseUrl}${url}`
-      return baseUrl
-    },
-  },
-  pages: {
-    signIn: '/login',
-    error: '/login',
   },
 })
 
