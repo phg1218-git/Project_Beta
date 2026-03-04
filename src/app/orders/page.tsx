@@ -25,7 +25,7 @@ function getTrackingUrl(carrier: string, trackingNumber: string): string {
 }
 
 // 환경변수에서 계좌 정보 가져오기
-const BANK_ACCOUNT_INFO = process.env.BANK_ACCOUNT_INFO || '농협 000-0000-0000-00 (오늘의귤)'
+const BANK_ACCOUNT_INFO = process.env.BANK_ACCOUNT_INFO || ''
 
 async function getOrders(userId: string) {
   try {

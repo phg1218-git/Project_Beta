@@ -38,7 +38,7 @@ export default async function HomePage() {
         <div className="max-w-3xl mx-auto grid grid-cols-3 gap-4 text-center">
           <TrustItem emoji="🍊" title="당도 보장" desc="엄선된 고당도 귤만" />
           <TrustItem emoji="🚚" title="익일 배송" desc="오늘 수확, 내일 도착" />
-          <TrustItem emoji="🌿" title="친환경 재배" desc="GAP 인증 농장" />
+          <TrustItem emoji="🌿" title="친환경 재배" desc="농약 최소화 재배" />
         </div>
       </section>
 
@@ -46,14 +46,14 @@ export default async function HomePage() {
       <section className="py-12 px-6" style={{ background: 'var(--bg)' }}>
         <div className="max-w-2xl mx-auto text-center">
           <h2 className="text-xl md:text-2xl font-bold mb-4">
-            제주 한림읍, 우리 농장 이야기
+            조천의 바람과 아버님의 손길로 빚은 달콤함
           </h2>
           <p className="text-gray-600 leading-relaxed text-sm md:text-base">
-            3대째 이어온 감귤 농가에서 정성껏 재배합니다.
+            화려한 수식어 대신, 나무 한 그루 한 그루 직접 살피며 정성을 다했습니다.
             <br />
-            매일 아침 수확한 귤만 보내드려요.
+            자연을 닮은 귤을 위해 농약은 최소화하고, 제주의 햇살을 가득 담았습니다.
             <br />
-            중간 유통 없이 농장에서 바로 문 앞까지, 오늘의귤입니다.
+            농장에서 문 앞까지, 아버님의 진심이 담긴 오늘의 귤을 직송해 드립니다.
           </p>
         </div>
       </section>
@@ -73,9 +73,8 @@ export default async function HomePage() {
 
       {/* Footer */}
       <footer className="py-8 px-6 bg-gray-900 text-gray-400 text-center text-xs leading-relaxed">
-        <p className="mb-2">오늘의귤 | 제주특별자치도 제주시 한림읍</p>
-        <p className="mb-2">고객센터: 010-0000-0000 (평일 09:00~18:00)</p>
-        <p>입금 계좌: 농협 000-0000-0000-00 (오늘의귤)</p>
+        <p className="mb-2">오늘의귤 | 제주특별자치도 제주시 조천읍</p>
+        <p className="mb-2">고객센터: 010-9599-0703 (평일 09:00~18:00)</p>
         <p className="mt-4 text-gray-600">© 2025 오늘의귤. All rights reserved.</p>
       </footer>
     </div>

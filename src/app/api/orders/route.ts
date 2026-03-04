@@ -75,7 +75,7 @@ export async function POST(req: Request) {
           userId: session.user.id,
           totalAmount,
           depositorName: depositorName || session.user.name,
-          bankAccountSnapshot: process.env.BANK_ACCOUNT_INFO || '농협 123-4567-8901-23 (오늘의귤)',
+          bankAccountSnapshot: process.env.BANK_ACCOUNT_INFO || '',
           items: {
             create: items.map((item: {
               productId: string
