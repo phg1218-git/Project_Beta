@@ -167,6 +167,23 @@ enum Role {
   ADMIN
 }
 
+// ── 관리자 액션 로그 ──
+
+model AdminActionLog {
+  id         String   @id @default(cuid())
+  adminId    String
+  action     String   // confirm-payment | ship | delivered | expire
+  targetType String   // order | bulk
+  targetId   String   // orderId 또는 'bulk'
+  beforeJson String?  @db.Text
+  afterJson  String?  @db.Text
+  createdAt  DateTime @default(now())
+
+  @@index([createdAt])
+  @@index([action])
+  @@index([targetType, targetId])
+}
+
 model CartItem {
   id        String   @id @default(cuid())
   userId    String

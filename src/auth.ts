@@ -3,7 +3,9 @@ import Google from 'next-auth/providers/google'
 import Naver from 'next-auth/providers/naver'
 import { prisma } from '@/lib/prisma'
 
-const ADMIN_EMAILS = ['dnffkffk486@gmail.com']
+const ADMIN_EMAILS: string[] = process.env.ADMIN_EMAILS
+  ? process.env.ADMIN_EMAILS.split(',').map((e) => e.trim()).filter(Boolean)
+  : []
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   providers: [
@@ -21,7 +23,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   },
   callbacks: {
     async signIn({ user, account }) {
-      if (!account || !user.email) return true
+      if (!account || !user.email) return false
 
       try {
         const isAdmin = ADMIN_EMAILS.includes(user.email)
@@ -93,11 +95,12 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
             })
           }
         }
+
+        return true
       } catch (error) {
         console.error('사용자 생성/조회 오류:', error)
+        return false
       }
-
-      return true
     },
 
     async jwt({ token, user, account, trigger, session }) {

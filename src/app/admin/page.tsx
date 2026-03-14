@@ -3,6 +3,7 @@
 
 import Link from 'next/link'
 import { prisma } from '@/lib/prisma'
+import { AdminExpireButton } from '@/components/AdminExpireButton'
 
 export const dynamic = 'force-dynamic'
 export const revalidate = 0
@@ -116,12 +117,24 @@ export default async function AdminDashboardPage() {
         </div>
       </div>
 
+      {/* 만료 주문 정리 */}
+      <div className="mb-8 p-4 bg-white rounded-xl shadow-sm flex items-center justify-between flex-wrap gap-3">
+        <div>
+          <p className="font-semibold text-gray-900">만료 주문 자동취소</p>
+          <p className="text-xs text-gray-500 mt-0.5">
+            입금기한이 지난 DRAFT/입금확인요청 주문을 취소하고 재고를 복구합니다.
+          </p>
+        </div>
+        <AdminExpireButton />
+      </div>
+
       {/* 빠른 액션 */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
         <QuickAction href="/admin/orders" icon="📋" label="주문 관리" desc="입금확인 · 배송처리" />
         <QuickAction href="/admin/products" icon="🍊" label="상품 관리" desc="등록 · 수정 · 삭제" />
         <QuickAction href="/admin/revenue" icon="💰" label="수익 통계" desc="일별 · 주별 · 월별" />
         <QuickAction href="/admin/members" icon="👥" label="회원 관리" desc="회원 조회 · 관리" />
+        <QuickAction href="/admin/logs" icon="🗒️" label="액션 로그" desc="관리자 이력 조회" />
       </div>
 
       {/* 최근 주문 */}
@@ -134,7 +147,7 @@ export default async function AdminDashboardPage() {
         </div>
         <div className="divide-y divide-gray-100">
           {stats.recentOrders.length > 0 ? (
-            stats.recentOrders.map((order: any) => (
+            stats.recentOrders.map((order) => (
               <div key={order.id} className="px-6 py-4 flex items-center justify-between">
                 <div>
                   <p className="font-medium text-gray-900">{order.user?.name || '알 수 없음'}</p>
