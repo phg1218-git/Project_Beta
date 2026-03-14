@@ -177,6 +177,7 @@ export default function CartPage() {
       const data = await res.json()
 
       if (!res.ok) {
+        console.error('[주문 생성 실패]', { status: res.status, code: data.code, payload: data })
         alert(data.error || '주문 생성에 실패했습니다.')
         return
       }

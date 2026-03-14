@@ -34,6 +34,11 @@ export default auth(async (req) => {
     return NextResponse.next()
   }
 
+  // 로그인된 사용자가 /login 접근 시 리다이렉트
+  if (isLoggedIn && pathname === '/login') {
+    return NextResponse.redirect(new URL('/products', nextUrl.origin))
+  }
+
   // 비로그인 사용자가 비공개 경로 접근 시 로그인 페이지로
   if (!isLoggedIn && !isPublicPath) {
     const loginUrl = new URL('/login', nextUrl.origin)

@@ -37,8 +37,8 @@ export function CitrusBottomTabBar() {
     }
   }
 
-  // 관리자 페이지에서는 숨김
-  if (pathname.startsWith('/admin')) {
+  // 로그인/관리자 페이지에서는 숨김
+  if (pathname === '/login' || pathname.startsWith('/admin')) {
     return null
   }
 

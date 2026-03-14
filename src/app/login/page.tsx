@@ -1,14 +1,33 @@
 'use client'
 
-import { signIn } from 'next-auth/react'
+import { signIn, useSession } from 'next-auth/react'
+import { useRouter } from 'next/navigation'
+import { useEffect } from 'react'
 
 export default function LoginPage() {
+  const { status } = useSession()
+  const router = useRouter()
+
+  useEffect(() => {
+    if (status === 'authenticated') {
+      router.replace('/products')
+    }
+  }, [status, router])
+
   const handleGoogleLogin = () => {
     signIn('google', { callbackUrl: '/' })
   }
 
   const handleNaverLogin = () => {
     signIn('naver', { callbackUrl: '/' })
+  }
+
+  if (status === 'loading' || status === 'authenticated') {
+    return (
+      <div className="min-h-[80vh] flex items-center justify-center">
+        <div className="text-4xl animate-bounce">🍊</div>
+      </div>
+    )
   }
 
   return (

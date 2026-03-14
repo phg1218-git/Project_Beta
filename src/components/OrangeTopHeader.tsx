@@ -33,6 +33,9 @@ export function OrangeTopHeader() {
     }
   }
 
+  // 로그인 페이지에서는 헤더 숨김
+  if (pathname === '/login') return null
+
   return (
     <header className="sticky top-0 z-[100] h-14 md:h-16 bg-white/90 backdrop-blur-xl border-b border-gray-100 shadow-sm">
       <div className="h-full max-w-5xl mx-auto px-4 md:px-6 flex items-center justify-between">
@@ -125,7 +128,10 @@ export function OrangeTopHeader() {
                         </Link>
                       )}
                       <button
-                        onClick={() => signOut({ callbackUrl: '/' })}
+                        onClick={async () => {
+                          await signOut({ redirect: false })
+                          window.location.href = '/'
+                        }}
                         className="w-full flex items-center gap-2 px-4 py-2.5 text-sm text-red-500 hover:bg-red-50 transition-colors"
                       >
                         <span>🚪</span> 로그아웃

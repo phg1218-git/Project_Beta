@@ -94,7 +94,10 @@ export default function ProfilePage() {
       {/* 로그아웃 버튼 */}
       <div className="px-4 mt-4">
         <button
-          onClick={() => signOut({ callbackUrl: '/' })}
+          onClick={async () => {
+            await signOut({ redirect: false })
+            window.location.href = '/'
+          }}
           className="w-full py-3 bg-gray-100 text-red-500 font-semibold rounded-xl hover:bg-gray-200 transition-colors"
         >
           로그아웃
