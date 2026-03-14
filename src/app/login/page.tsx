@@ -22,6 +22,10 @@ export default function LoginPage() {
     signIn('naver', { callbackUrl: '/' })
   }
 
+  const handleKakaoLogin = () => {
+    signIn('kakao', { callbackUrl: '/' })
+  }
+
   if (status === 'loading' || status === 'authenticated') {
     return (
       <div className="min-h-[80vh] flex items-center justify-center">
@@ -63,11 +67,11 @@ export default function LoginPage() {
         </button>
 
         <button
-          disabled
-          className="flex items-center justify-center gap-3 w-full h-13 px-4 py-3 bg-[#FEE500] text-gray-900 font-semibold rounded-2xl shadow-sm hover:shadow-md transition-shadow min-h-[52px] opacity-50 cursor-not-allowed"
+          onClick={handleKakaoLogin}
+          className="flex items-center justify-center gap-3 w-full h-13 px-4 py-3 bg-[#FEE500] text-gray-900 font-semibold rounded-2xl shadow-sm hover:shadow-md transition-shadow min-h-[52px]"
         >
           <span className="text-lg">💬</span>
-          카카오로 시작하기 (준비중)
+          카카오로 시작하기
         </button>
       </div>
 

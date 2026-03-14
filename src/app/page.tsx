@@ -1,6 +1,8 @@
 import Link from 'next/link'
 import { auth } from '@/auth'
 
+const BANK_ACCOUNT_INFO = process.env.BANK_ACCOUNT_INFO || '농협 000-0000-0000-00 (오늘의귤)'
+
 // 메인 랜딩 페이지 - Hero Section + 브랜드 스토리 + 신뢰 요소
 export default async function HomePage() {
   const session = await auth()
@@ -75,7 +77,7 @@ export default async function HomePage() {
       <footer className="py-8 px-6 bg-gray-900 text-gray-400 text-center text-xs leading-relaxed">
         <p className="mb-2">오늘의귤 | 제주특별자치도 제주시 한림읍</p>
         <p className="mb-2">고객센터: 010-0000-0000 (평일 09:00~18:00)</p>
-        <p>입금 계좌: 농협 000-0000-0000-00 (오늘의귤)</p>
+        <p>입금 계좌: {BANK_ACCOUNT_INFO}</p>
         <p className="mt-4 text-gray-600">© 2025 오늘의귤. All rights reserved.</p>
       </footer>
     </div>
