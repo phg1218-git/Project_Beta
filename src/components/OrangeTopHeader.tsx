@@ -128,10 +128,7 @@ export function OrangeTopHeader() {
                         </Link>
                       )}
                       <button
-                        onClick={async () => {
-                          await signOut({ redirect: false })
-                          window.location.href = '/'
-                        }}
+                        onClick={() => signOut({ callbackUrl: '/login' })}
                         className="w-full flex items-center gap-2 px-4 py-2.5 text-sm text-red-500 hover:bg-red-50 transition-colors"
                       >
                         <span>🚪</span> 로그아웃

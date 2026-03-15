@@ -20,6 +20,10 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     }),
     Kakao({
       clientId: process.env.AUTH_KAKAO_ID!,
+      // KOE004 대응:
+      // Kakao 콘솔 → 내 앱 → 보안 → "Client Secret 사용"이 ON이어야 이 값이 유효함.
+      // OFF 상태에서 Auth.js가 client_secret을 전송하면 KOE004 발생.
+      // → 콘솔에서 "Client Secret 사용"을 활성화하고, 생성된 값을 AUTH_KAKAO_SECRET에 설정.
       clientSecret: process.env.AUTH_KAKAO_SECRET!,
     }),
   ],
@@ -28,7 +32,14 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   },
   callbacks: {
     async signIn({ user, account }) {
-      if (!account || !user.email) return false
+      if (!account) return false
+
+      // 이메일 없이는 계정 식별 불가 — 제공자 동의항목 미동의가 주원인
+      // false 대신 URL 반환하면 Auth.js v5가 해당 경로로 리다이렉트함
+      if (!user.email) {
+        console.warn(`[Auth] 이메일 미제공: provider=${account.provider}`)
+        return '/login?error=NoEmail'
+      }
 
       try {
         const isAdmin = ADMIN_EMAILS.includes(user.email)
@@ -103,8 +114,12 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
 
         return true
       } catch (error) {
-        console.error('사용자 생성/조회 오류:', error)
-        return false
+        // 민감 정보(토큰·이메일) 미포함 — 오류 유형과 제공자만 기록
+        console.error(
+          `[Auth] 사용자 저장 오류: provider=${account.provider},`,
+          error instanceof Error ? error.message : 'unknown error',
+        )
+        return '/login?error=ServerError'
       }
     },
 
