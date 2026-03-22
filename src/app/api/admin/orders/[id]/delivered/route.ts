@@ -32,11 +32,24 @@ export async function POST(_req: Request, { params }: RouteParams) {
       )
     }
 
+    // 미발송 아이템이 있으면 전체 배송완료 차단
+    const unshippedItems = order.items.filter((item) => !item.shippedAt)
+    if (unshippedItems.length > 0) {
+      return NextResponse.json(
+        {
+          error: `미발송 상품이 ${unshippedItems.length}건 남아있습니다. 모든 상품을 발송 처리한 후 배송완료 처리해주세요.`,
+          unshippedCount: unshippedItems.length,
+        },
+        { status: 400 }
+      )
+    }
+
     await prisma.$transaction(async (tx) => {
       const now = new Date()
 
+      // shippedAt이 있는 아이템만 deliveredAt 설정 (방어 코드)
       await tx.orderItem.updateMany({
-        where: { orderId: id },
+        where: { orderId: id, shippedAt: { not: null } },
         data: { deliveredAt: now },
       })
 

@@ -46,8 +46,9 @@ async function getOrders(
       prisma.order.count({ where }),
     ])
     return { orders, total }
-  } catch {
-    return { orders: [], total: 0 }
+  } catch (error) {
+    console.error('[Orders] 주문 목록 조회 실패:', error instanceof Error ? error.message : error)
+    throw error
   }
 }
 

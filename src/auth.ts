@@ -9,6 +9,9 @@ const ADMIN_EMAILS: string[] = process.env.ADMIN_EMAILS
   : []
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
+  // Netlify/preview 환경 등 AUTH_URL이 없어도 동작하도록 trustHost를 활성화
+  // 프로덕션에서는 AUTH_URL(또는 NEXTAUTH_URL)로 origin을 고정할 것
+  trustHost: true,
   providers: [
     Google({
       clientId: process.env.AUTH_GOOGLE_ID!,

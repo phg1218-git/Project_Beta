@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import Image from 'next/image'
 import { formatPrice } from '@/lib/utils'
 
 interface Product {
@@ -26,11 +27,12 @@ export function ProductCard({ product, index = 0 }: { product: Product; index?: 
       {/* 상품 이미지 */}
       <div className="relative w-full aspect-square bg-gradient-to-br from-orange-100 to-yellow-100 flex items-center justify-center">
         {product.imageUrl ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
+          <Image
             src={product.imageUrl}
             alt={product.name}
-            className="w-full h-full object-cover"
+            fill
+            sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
+            className="object-cover"
           />
         ) : (
           <span className="text-4xl sm:text-5xl md:text-6xl">{emoji}</span>

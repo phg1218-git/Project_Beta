@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
@@ -26,34 +26,51 @@ interface ShippingAddress {
   isDefault: boolean
 }
 
+type ToastState =
+  | { type: 'idle' }
+  | { type: 'success'; message: string }
+  | { type: 'error'; message: string }
+
 export default function CartPage() {
   const { data: session } = useSession()
   const router = useRouter()
   const [items, setItems] = useState<CartItem[]>([])
   const [loading, setLoading] = useState(true)
+  const [fetchError, setFetchError] = useState<string | null>(null)
   const [selectedIds, setSelectedIds] = useState<string[]>([])
   const [isOrdering, setIsOrdering] = useState(false)
+  const [toast, setToast] = useState<ToastState>({ type: 'idle' })
 
-  // 배송지 선택
   const [addresses, setAddresses] = useState<ShippingAddress[]>([])
   const [selectedAddressId, setSelectedAddressId] = useState<string | null>(null)
   const [showAddressModal, setShowAddressModal] = useState(false)
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState<
+    null | { type: 'selected' | 'all'; ids?: string[] }
+  >(null)
+
+  const showToast = useCallback((type: 'success' | 'error', message: string) => {
+    setToast({ type, message })
+    setTimeout(() => setToast({ type: 'idle' }), 4000)
+  }, [])
 
   useEffect(() => {
     fetchCart()
     fetchAddresses()
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   const fetchCart = async () => {
     try {
       const res = await fetch('/api/cart')
-      if (res.ok) {
-        const data = await res.json()
-        setItems(data)
-        setSelectedIds(data.map((item: CartItem) => item.id))
+      if (!res.ok) {
+        setFetchError('장바구니를 불러오지 못했습니다. 잠시 후 다시 시도해주세요.')
+        return
       }
-    } catch (error) {
-      console.error('장바구니 조회 실패:', error)
+      const data = await res.json()
+      setItems(data)
+      setSelectedIds(data.map((item: CartItem) => item.id))
+    } catch {
+      setFetchError('네트워크 오류로 장바구니를 불러오지 못했습니다.')
     } finally {
       setLoading(false)
     }
@@ -69,7 +86,7 @@ export default function CartPage() {
         setSelectedAddressId(def?.id ?? data[0]?.id ?? null)
       }
     } catch {
-      // 무시 — 서버에서 fallback 처리
+      // 배송지 조회 실패는 비필수 — 주문 시 기본 배송지로 진행
     }
   }
 
@@ -77,52 +94,93 @@ export default function CartPage() {
     const item = items.find((i) => i.id === id)
     if (!item) return
     const newQty = Math.max(1, Math.min(item.stock, item.quantity + delta))
+    if (newQty === item.quantity) return
+
+    // optimistic update
+    setItems((prev) => prev.map((i) => (i.id === id ? { ...i, quantity: newQty } : i)))
+
     try {
-      await fetch(`/api/cart/${id}`, {
+      const res = await fetch(`/api/cart/${id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ quantity: newQty }),
       })
-      setItems((prev) => prev.map((i) => (i.id === id ? { ...i, quantity: newQty } : i)))
-    } catch (error) {
-      console.error('수량 변경 실패:', error)
+      if (!res.ok) {
+        // rollback
+        setItems((prev) => prev.map((i) => (i.id === id ? { ...i, quantity: item.quantity } : i)))
+        showToast('error', '수량 변경에 실패했습니다.')
+      }
+    } catch {
+      // rollback
+      setItems((prev) => prev.map((i) => (i.id === id ? { ...i, quantity: item.quantity } : i)))
+      showToast('error', '네트워크 오류로 수량을 변경하지 못했습니다.')
     }
   }
 
   const deleteItem = async (id: string) => {
+    // optimistic update
+    const prevItems = items
+    const prevSelected = selectedIds
+    setItems((prev) => prev.filter((i) => i.id !== id))
+    setSelectedIds((prev) => prev.filter((i) => i !== id))
+
     try {
-      await fetch(`/api/cart/${id}`, { method: 'DELETE' })
-      setItems((prev) => prev.filter((i) => i.id !== id))
-      setSelectedIds((prev) => prev.filter((i) => i !== id))
-    } catch (error) {
-      console.error('삭제 실패:', error)
+      const res = await fetch(`/api/cart/${id}`, { method: 'DELETE' })
+      if (!res.ok) {
+        // rollback
+        setItems(prevItems)
+        setSelectedIds(prevSelected)
+        showToast('error', '상품 삭제에 실패했습니다.')
+      }
+    } catch {
+      setItems(prevItems)
+      setSelectedIds(prevSelected)
+      showToast('error', '네트워크 오류로 삭제하지 못했습니다.')
     }
   }
 
   const deleteSelected = async () => {
-    if (selectedIds.length === 0) {
-      alert('삭제할 상품을 선택해주세요.')
-      return
-    }
-    if (!confirm(`${selectedIds.length}개 상품을 삭제할까요?`)) return
+    setShowDeleteConfirm(null)
+    const prevItems = items
+    const prevSelected = selectedIds
+    setItems((prev) => prev.filter((i) => !selectedIds.includes(i.id)))
+    setSelectedIds([])
+
     try {
-      await Promise.all(selectedIds.map((id) => fetch(`/api/cart/${id}`, { method: 'DELETE' })))
-      setItems((prev) => prev.filter((i) => !selectedIds.includes(i.id)))
-      setSelectedIds([])
-    } catch (error) {
-      console.error('일괄 삭제 실패:', error)
+      const results = await Promise.all(
+        selectedIds.map((id) => fetch(`/api/cart/${id}`, { method: 'DELETE' }))
+      )
+      const failed = results.filter((r) => !r.ok)
+      if (failed.length > 0) {
+        setItems(prevItems)
+        setSelectedIds(prevSelected)
+        showToast('error', `${failed.length}개 삭제에 실패했습니다. 다시 시도해주세요.`)
+      }
+    } catch {
+      setItems(prevItems)
+      setSelectedIds(prevSelected)
+      showToast('error', '네트워크 오류로 삭제하지 못했습니다.')
     }
   }
 
   const deleteAll = async () => {
-    if (items.length === 0) return
-    if (!confirm('장바구니를 비울까요?')) return
+    setShowDeleteConfirm(null)
+    const prevItems = items
+    const prevSelected = selectedIds
+    setItems([])
+    setSelectedIds([])
+
     try {
-      await fetch('/api/cart', { method: 'DELETE' })
-      setItems([])
-      setSelectedIds([])
-    } catch (error) {
-      console.error('전체 삭제 실패:', error)
+      const res = await fetch('/api/cart', { method: 'DELETE' })
+      if (!res.ok) {
+        setItems(prevItems)
+        setSelectedIds(prevSelected)
+        showToast('error', '전체 삭제에 실패했습니다.')
+      }
+    } catch {
+      setItems(prevItems)
+      setSelectedIds(prevSelected)
+      showToast('error', '네트워크 오류로 삭제하지 못했습니다.')
     }
   }
 
@@ -136,18 +194,17 @@ export default function CartPage() {
 
   const selectedItems = items.filter((item) => selectedIds.includes(item.id))
   const total = selectedItems.reduce((sum, item) => sum + item.price * item.quantity, 0)
-
   const selectedAddress = addresses.find((a) => a.id === selectedAddressId)
 
   const handleOrder = async () => {
     if (selectedIds.length === 0) {
-      alert('주문할 상품을 선택해주세요.')
+      showToast('error', '주문할 상품을 선택해주세요.')
       return
     }
 
     if (!session?.user?.profileComplete) {
-      alert('배송 정보를 먼저 등록해주세요.')
-      router.push('/profile/setup')
+      showToast('error', '배송 정보를 먼저 등록해주세요. 프로필로 이동합니다.')
+      setTimeout(() => router.push('/profile/setup'), 1500)
       return
     }
 
@@ -163,7 +220,6 @@ export default function CartPage() {
         fromCart: true,
         cartItemIds: selectedIds,
       }
-      // 선택한 배송지가 있으면 전달
       if (selectedAddressId) {
         body.shippingAddressId = selectedAddressId
       }
@@ -178,15 +234,13 @@ export default function CartPage() {
 
       if (!res.ok) {
         console.error('[주문 생성 실패]', { status: res.status, code: data.code, payload: data })
-        alert(data.error || '주문 생성에 실패했습니다.')
+        showToast('error', data.error || '주문 생성에 실패했습니다.')
         return
       }
 
-      alert('주문이 생성되었습니다! 입금 후 입금확인 요청을 해주세요.')
       router.push(`/orders/${data.id}`)
-    } catch (error) {
-      console.error('주문 생성 오류:', error)
-      alert('주문 생성 중 오류가 발생했습니다.')
+    } catch {
+      showToast('error', '주문 생성 중 오류가 발생했습니다. 다시 시도해주세요.')
     } finally {
       setIsOrdering(false)
     }
@@ -196,9 +250,23 @@ export default function CartPage() {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
         <div className="text-center">
-          <div className="text-4xl mb-4">🛒</div>
-          <p className="text-gray-500">로딩 중...</p>
+          <div className="w-8 h-8 border-4 border-orange-200 border-t-orange-500 rounded-full animate-spin mx-auto mb-4" />
+          <p className="text-gray-500 text-sm">장바구니 불러오는 중...</p>
         </div>
+      </div>
+    )
+  }
+
+  if (fetchError) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[60vh] px-6 text-center">
+        <p className="text-gray-500 mb-4">{fetchError}</p>
+        <button
+          onClick={() => { setFetchError(null); setLoading(true); fetchCart() }}
+          className="px-6 py-2 bg-orange-500 text-white font-semibold rounded-full"
+        >
+          다시 시도
+        </button>
       </div>
     )
   }
@@ -208,7 +276,7 @@ export default function CartPage() {
       <div className="flex flex-col items-center justify-center min-h-[60vh] px-4">
         <div className="text-6xl mb-4">🛒</div>
         <p className="text-gray-500 text-center leading-relaxed mb-6">
-          아직 담은 상품이 없어요.<br />달콤한 귤을 골라보세요 🍊
+          아직 담은 상품이 없어요.<br />달콤한 귤을 골라보세요
         </p>
         <Link href="/products" className="px-6 py-3 bg-orange-500 text-white font-semibold rounded-full">
           상품 보러가기
@@ -219,9 +287,51 @@ export default function CartPage() {
 
   return (
     <div className="page-enter pb-36">
+      {/* 토스트 알림 */}
+      {toast.type !== 'idle' && (
+        <div
+          className={`fixed top-4 left-1/2 -translate-x-1/2 z-[300] px-4 py-3 rounded-xl shadow-lg text-sm font-medium transition-all ${
+            toast.type === 'success'
+              ? 'bg-green-600 text-white'
+              : 'bg-red-600 text-white'
+          }`}
+        >
+          {toast.message}
+        </div>
+      )}
+
+      {/* 삭제 확인 인라인 다이얼로그 */}
+      {showDeleteConfirm && (
+        <div className="fixed inset-0 z-[250] flex items-center justify-center px-6">
+          <div className="absolute inset-0 bg-black/40" onClick={() => setShowDeleteConfirm(null)} />
+          <div className="relative bg-white rounded-2xl p-6 w-full max-w-sm shadow-xl">
+            <p className="text-gray-900 font-semibold mb-1">
+              {showDeleteConfirm.type === 'selected'
+                ? `선택한 ${selectedIds.length}개 상품을 삭제할까요?`
+                : '장바구니를 모두 비울까요?'}
+            </p>
+            <p className="text-sm text-gray-500 mb-4">이 작업은 되돌릴 수 없습니다.</p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setShowDeleteConfirm(null)}
+                className="flex-1 py-2.5 rounded-xl text-sm font-semibold bg-gray-100 text-gray-600 hover:bg-gray-200"
+              >
+                취소
+              </button>
+              <button
+                onClick={showDeleteConfirm.type === 'selected' ? deleteSelected : deleteAll}
+                className="flex-1 py-2.5 rounded-xl text-sm font-semibold bg-red-500 text-white hover:bg-red-600"
+              >
+                삭제
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* 페이지 헤더 */}
       <div className="px-4 py-4 bg-white border-b border-gray-200">
-        <h1 className="text-xl font-bold">🛒 장바구니</h1>
+        <h1 className="text-xl font-bold">장바구니</h1>
         <p className="text-sm text-gray-500 mt-1">{items.length}개 상품</p>
       </div>
 
@@ -232,19 +342,25 @@ export default function CartPage() {
             type="checkbox"
             checked={selectedIds.length === items.length && items.length > 0}
             onChange={toggleSelectAll}
-            className="w-4 h-4 rounded"
+            className="w-4 h-4 rounded accent-orange-500"
           />
           <span className="text-sm text-gray-600">전체선택</span>
         </label>
         <div className="flex gap-2">
           <button
-            onClick={deleteSelected}
+            onClick={() => {
+              if (selectedIds.length === 0) { showToast('error', '삭제할 상품을 선택해주세요.'); return }
+              setShowDeleteConfirm({ type: 'selected' })
+            }}
             className="px-3 py-1.5 text-sm text-red-500 border border-red-200 rounded-lg hover:bg-red-50"
           >
             선택삭제
           </button>
           <button
-            onClick={deleteAll}
+            onClick={() => {
+              if (items.length === 0) return
+              setShowDeleteConfirm({ type: 'all' })
+            }}
             className="px-3 py-1.5 text-sm text-gray-500 border border-gray-200 rounded-lg hover:bg-gray-100"
           >
             전체삭제
@@ -273,16 +389,32 @@ export default function CartPage() {
             <div className="flex-1">
               <div className="flex items-start justify-between">
                 <p className="font-semibold text-gray-900">{item.productName}</p>
-                <button onClick={() => deleteItem(item.id)} className="text-gray-400 hover:text-red-500 text-lg">
+                <button
+                  onClick={() => deleteItem(item.id)}
+                  className="text-gray-400 hover:text-red-500 text-lg"
+                  aria-label="삭제"
+                >
                   ✕
                 </button>
               </div>
               <p className="text-orange-500 font-bold mt-1">{formatPrice(item.price * item.quantity)}</p>
               <div className="flex items-center justify-between mt-2">
                 <div className="flex items-center gap-2 bg-gray-100 rounded-lg px-2 py-1">
-                  <button onClick={() => updateQty(item.id, -1)} className="w-7 h-7 flex items-center justify-center text-orange-500 font-bold">−</button>
+                  <button
+                    onClick={() => updateQty(item.id, -1)}
+                    className="w-7 h-7 flex items-center justify-center text-orange-500 font-bold"
+                    aria-label="수량 감소"
+                  >
+                    −
+                  </button>
                   <span className="w-6 text-center font-semibold">{item.quantity}</span>
-                  <button onClick={() => updateQty(item.id, 1)} className="w-7 h-7 flex items-center justify-center text-orange-500 font-bold">+</button>
+                  <button
+                    onClick={() => updateQty(item.id, 1)}
+                    className="w-7 h-7 flex items-center justify-center text-orange-500 font-bold"
+                    aria-label="수량 증가"
+                  >
+                    +
+                  </button>
                 </div>
                 <span className="text-xs text-gray-400">재고 {item.stock}개</span>
               </div>
@@ -296,7 +428,7 @@ export default function CartPage() {
         <div className="px-4 mb-3">
           <div className="bg-white rounded-2xl shadow-sm p-4 border border-gray-100">
             <div className="flex items-center justify-between mb-2">
-              <p className="text-sm font-semibold text-gray-700">📦 배송지</p>
+              <p className="text-sm font-semibold text-gray-700">배송지</p>
               <button
                 onClick={() => setShowAddressModal(true)}
                 className="text-xs text-orange-500 font-semibold hover:text-orange-600"
@@ -360,7 +492,13 @@ export default function CartPage() {
           <div className="relative bg-white rounded-t-2xl w-full max-w-lg p-5 pb-8">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-base font-bold text-gray-900">배송지 선택</h3>
-              <button onClick={() => setShowAddressModal(false)} className="text-gray-400 hover:text-gray-600 text-xl">✕</button>
+              <button
+                onClick={() => setShowAddressModal(false)}
+                className="text-gray-400 hover:text-gray-600 text-xl"
+                aria-label="닫기"
+              >
+                ✕
+              </button>
             </div>
             <div className="space-y-3 max-h-[60vh] overflow-y-auto">
               {addresses.map((addr) => (
@@ -378,8 +516,16 @@ export default function CartPage() {
                 >
                   <div className="flex items-center gap-2 mb-1">
                     <p className="text-sm font-semibold text-gray-900">{addr.name}</p>
-                    {addr.label && <span className="text-xs bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded">{addr.label}</span>}
-                    {addr.isDefault && <span className="text-xs bg-orange-100 text-orange-600 px-1.5 py-0.5 rounded font-medium">기본</span>}
+                    {addr.label && (
+                      <span className="text-xs bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded">
+                        {addr.label}
+                      </span>
+                    )}
+                    {addr.isDefault && (
+                      <span className="text-xs bg-orange-100 text-orange-600 px-1.5 py-0.5 rounded font-medium">
+                        기본
+                      </span>
+                    )}
                   </div>
                   <p className="text-xs text-gray-500">{addr.phone}</p>
                   <p className="text-xs text-gray-500 mt-0.5">

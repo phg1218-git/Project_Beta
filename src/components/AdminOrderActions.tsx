@@ -24,18 +24,24 @@ interface ItemShipState {
   trackingNumber: string
 }
 
+type ActionState =
+  | { type: 'idle' }
+  | { type: 'loading' }
+  | { type: 'confirm'; message: string; onConfirm: () => void }
+  | { type: 'success'; message: string }
+  | { type: 'error'; message: string }
+
 export function AdminOrderActions({ order }: { order: Order }) {
   const router = useRouter()
-  const [isLoading, setIsLoading] = useState(false)
+  const [actionState, setActionState] = useState<ActionState>({ type: 'idle' })
   const [showShippingModal, setShowShippingModal] = useState(false)
   const [shipMode, setShipMode] = useState<'single' | 'partial'>('single')
 
-  // 단건 배송 상태
   const [carrier, setCarrier] = useState('CJ대한통운')
   const [trackingNumber, setTrackingNumber] = useState('')
-
-  // 아이템별 배송 상태
   const [itemStates, setItemStates] = useState<Record<string, ItemShipState>>({})
+
+  const isLoading = actionState.type === 'loading'
 
   const updateItemState = (itemId: string, field: keyof ItemShipState, value: string) => {
     setItemStates((prev) => {
@@ -44,54 +50,65 @@ export function AdminOrderActions({ order }: { order: Order }) {
     })
   }
 
-  const handleConfirmPayment = async () => {
-    if (!confirm('입금을 확인하시겠습니까?')) return
-    setIsLoading(true)
-    try {
-      const res = await fetch(`/api/admin/orders/${order.id}/confirm-payment`, { method: 'POST' })
-      if (res.ok) {
-        alert('입금이 확인되었습니다.')
-        router.refresh()
-      } else {
-        const data = await res.json()
-        alert(data.error || '처리에 실패했습니다.')
+  const showSuccess = (message: string) => {
+    setActionState({ type: 'success', message })
+    setTimeout(() => setActionState({ type: 'idle' }), 3000)
+  }
+
+  const showError = (message: string) => {
+    setActionState({ type: 'error', message })
+    setTimeout(() => setActionState({ type: 'idle' }), 5000)
+  }
+
+  const requestConfirm = (message: string, onConfirm: () => void) => {
+    setActionState({ type: 'confirm', message, onConfirm })
+  }
+
+  const handleConfirmPayment = () => {
+    requestConfirm('입금을 확인하시겠습니까?', async () => {
+      setActionState({ type: 'loading' })
+      try {
+        const res = await fetch(`/api/admin/orders/${order.id}/confirm-payment`, { method: 'POST' })
+        if (res.ok) {
+          showSuccess('입금이 확인되었습니다.')
+          router.refresh()
+        } else {
+          const data = await res.json()
+          showError(data.error || '입금 확인에 실패했습니다.')
+        }
+      } catch {
+        showError('네트워크 오류가 발생했습니다.')
       }
-    } catch {
-      alert('네트워크 오류가 발생했습니다.')
-    } finally {
-      setIsLoading(false)
-    }
+    })
   }
 
   const handleShip = async () => {
-    setIsLoading(true)
-    try {
-      let body: unknown
+    let body: unknown
 
-      if (shipMode === 'partial' && order.items && order.items.length > 0) {
-        const items = order.items
-          .filter((item) => itemStates[item.id]?.trackingNumber?.trim())
-          .map((item) => ({
-            orderItemId: item.id,
-            carrier: itemStates[item.id]?.carrier || 'CJ대한통운',
-            trackingNumber: itemStates[item.id].trackingNumber.trim(),
-          }))
+    if (shipMode === 'partial' && order.items && order.items.length > 0) {
+      const items = order.items
+        .filter((item) => itemStates[item.id]?.trackingNumber?.trim())
+        .map((item) => ({
+          orderItemId: item.id,
+          carrier: itemStates[item.id]?.carrier || 'CJ대한통운',
+          trackingNumber: itemStates[item.id].trackingNumber.trim(),
+        }))
 
-        if (items.length === 0) {
-          alert('송장번호를 하나 이상 입력해주세요.')
-          setIsLoading(false)
-          return
-        }
-        body = { items }
-      } else {
-        if (!trackingNumber.trim()) {
-          alert('송장번호를 입력해주세요.')
-          setIsLoading(false)
-          return
-        }
-        body = { carrier, trackingNumber }
+      if (items.length === 0) {
+        showError('송장번호를 하나 이상 입력해주세요.')
+        return
       }
+      body = { items }
+    } else {
+      if (!trackingNumber.trim()) {
+        showError('송장번호를 입력해주세요.')
+        return
+      }
+      body = { carrier, trackingNumber }
+    }
 
+    setActionState({ type: 'loading' })
+    try {
       const res = await fetch(`/api/admin/orders/${order.id}/ship`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -99,71 +116,106 @@ export function AdminOrderActions({ order }: { order: Order }) {
       })
 
       if (res.ok) {
-        alert('배송 처리가 완료되었습니다.')
+        showSuccess('배송 처리가 완료되었습니다.')
         setShowShippingModal(false)
         router.refresh()
       } else {
         const data = await res.json()
-        alert(data.error || '처리에 실패했습니다.')
+        showError(data.error || '배송 처리에 실패했습니다.')
       }
     } catch {
-      alert('네트워크 오류가 발생했습니다.')
-    } finally {
-      setIsLoading(false)
+      showError('네트워크 오류가 발생했습니다.')
     }
   }
 
-  const handleDelivered = async () => {
-    if (!confirm('배송 완료 처리하시겠습니까?')) return
-    setIsLoading(true)
-    try {
-      const res = await fetch(`/api/admin/orders/${order.id}/delivered`, { method: 'POST' })
-      if (res.ok) {
-        alert('배송 완료 처리되었습니다.')
-        router.refresh()
-      } else {
-        const data = await res.json()
-        alert(data.error || '처리에 실패했습니다.')
+  const handleDelivered = () => {
+    requestConfirm('모든 상품이 배송 완료되었습니까?', async () => {
+      setActionState({ type: 'loading' })
+      try {
+        const res = await fetch(`/api/admin/orders/${order.id}/delivered`, { method: 'POST' })
+        if (res.ok) {
+          showSuccess('배송 완료 처리되었습니다.')
+          router.refresh()
+        } else {
+          const data = await res.json()
+          showError(data.error || '배송 완료 처리에 실패했습니다.')
+        }
+      } catch {
+        showError('네트워크 오류가 발생했습니다.')
       }
-    } catch {
-      alert('네트워크 오류가 발생했습니다.')
-    } finally {
-      setIsLoading(false)
-    }
+    })
   }
 
   const hasMultipleItems = (order.items?.length ?? 0) > 1
 
   return (
-    <div className="flex items-center gap-2">
-      {order.status === 'DEPOSIT_REQUESTED' && (
-        <button
-          onClick={handleConfirmPayment}
-          disabled={isLoading}
-          className="px-3 py-1.5 text-xs font-semibold text-white bg-blue-500 rounded-lg hover:bg-blue-600 disabled:opacity-50"
-        >
-          입금확인
-        </button>
+    <div className="flex flex-col gap-1.5">
+      {/* 인라인 상태 메시지 */}
+      {actionState.type === 'confirm' && (
+        <div className="flex flex-col gap-1 p-2 bg-yellow-50 border border-yellow-200 rounded-lg text-xs">
+          <p className="text-yellow-800 font-medium">{actionState.message}</p>
+          <div className="flex gap-1">
+            <button
+              onClick={() => actionState.onConfirm()}
+              className="px-2 py-1 bg-yellow-500 text-white rounded font-medium hover:bg-yellow-600"
+            >
+              확인
+            </button>
+            <button
+              onClick={() => setActionState({ type: 'idle' })}
+              className="px-2 py-1 bg-gray-100 text-gray-600 rounded font-medium hover:bg-gray-200"
+            >
+              취소
+            </button>
+          </div>
+        </div>
       )}
 
-      {(order.status === 'PAYMENT_CONFIRMED' || order.status === 'SHIPPING') && (
-        <button
-          onClick={() => setShowShippingModal(true)}
-          disabled={isLoading}
-          className="px-3 py-1.5 text-xs font-semibold text-white bg-orange-500 rounded-lg hover:bg-orange-600 disabled:opacity-50"
-        >
-          배송처리
-        </button>
+      {actionState.type === 'success' && (
+        <p className="text-xs text-green-700 bg-green-50 border border-green-200 rounded-lg px-2 py-1">
+          {actionState.message}
+        </p>
       )}
 
-      {order.status === 'SHIPPING' && (
-        <button
-          onClick={handleDelivered}
-          disabled={isLoading}
-          className="px-3 py-1.5 text-xs font-semibold text-white bg-green-500 rounded-lg hover:bg-green-600 disabled:opacity-50"
-        >
-          배송완료
-        </button>
+      {actionState.type === 'error' && (
+        <p className="text-xs text-red-700 bg-red-50 border border-red-200 rounded-lg px-2 py-1">
+          {actionState.message}
+        </p>
+      )}
+
+      {/* 액션 버튼 */}
+      {actionState.type !== 'confirm' && (
+        <div className="flex items-center gap-2">
+          {order.status === 'DEPOSIT_REQUESTED' && (
+            <button
+              onClick={handleConfirmPayment}
+              disabled={isLoading}
+              className="px-3 py-1.5 text-xs font-semibold text-white bg-blue-500 rounded-lg hover:bg-blue-600 disabled:opacity-50"
+            >
+              {isLoading ? '처리 중...' : '입금확인'}
+            </button>
+          )}
+
+          {(order.status === 'PAYMENT_CONFIRMED' || order.status === 'SHIPPING') && (
+            <button
+              onClick={() => setShowShippingModal(true)}
+              disabled={isLoading}
+              className="px-3 py-1.5 text-xs font-semibold text-white bg-orange-500 rounded-lg hover:bg-orange-600 disabled:opacity-50"
+            >
+              배송처리
+            </button>
+          )}
+
+          {order.status === 'SHIPPING' && (
+            <button
+              onClick={handleDelivered}
+              disabled={isLoading}
+              className="px-3 py-1.5 text-xs font-semibold text-white bg-green-500 rounded-lg hover:bg-green-600 disabled:opacity-50"
+            >
+              {isLoading ? '처리 중...' : '배송완료'}
+            </button>
+          )}
+        </div>
       )}
 
       {/* 배송 모달 */}
@@ -173,7 +225,7 @@ export function AdminOrderActions({ order }: { order: Order }) {
           <div className="relative bg-white rounded-xl p-6 w-full max-w-lg mx-4 max-h-[90vh] overflow-y-auto">
             <h3 className="text-lg font-bold mb-4">배송 정보 입력</h3>
 
-            {/* 배송 모드 선택 (다중 아이템일 때만) */}
+            {/* 배송 모드 선택 */}
             {hasMultipleItems && (
               <div className="flex gap-2 mb-4">
                 <button
@@ -262,10 +314,17 @@ export function AdminOrderActions({ order }: { order: Order }) {
               </div>
             )}
 
+            {/* 모달 내 에러 표시 */}
+            {actionState.type === 'error' && (
+              <p className="mt-3 text-xs text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
+                {actionState.message}
+              </p>
+            )}
+
             <div className="flex gap-3 mt-6">
               <button
                 onClick={() => setShowShippingModal(false)}
-                className="flex-1 py-2 rounded-lg font-medium text-gray-600 bg-gray-100"
+                className="flex-1 py-2 rounded-lg font-medium text-gray-600 bg-gray-100 hover:bg-gray-200"
               >
                 취소
               </button>

@@ -47,16 +47,10 @@ async function getDashboardStats() {
       monthlyRevenue: monthlyRevenue._sum.totalAmount || 0,
       recentOrders,
     }
-  } catch {
-    // DB 미연결 시 목업 데이터
-    return {
-      totalOrders: 156,
-      pendingOrders: 8,
-      totalProducts: 12,
-      totalMembers: 89,
-      monthlyRevenue: 4520000,
-      recentOrders: [],
-    }
+  } catch (error) {
+    console.error('[Admin] 대시보드 통계 조회 실패:', error instanceof Error ? error.message : error)
+    // DB 장애를 조용히 숨기지 않음 — 호출자가 error.tsx로 처리하게 throw
+    throw error
   }
 }
 

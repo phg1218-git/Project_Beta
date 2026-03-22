@@ -34,8 +34,9 @@ async function getProducts(q: string, page: number) {
       prisma.product.count({ where }),
     ])
     return { products, total }
-  } catch {
-    return { products: [], total: 0 }
+  } catch (error) {
+    console.error('[Products] 상품 목록 조회 실패:', error instanceof Error ? error.message : error)
+    throw error
   }
 }
 
