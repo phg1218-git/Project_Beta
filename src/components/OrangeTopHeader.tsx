@@ -5,7 +5,7 @@ import { useSession, signOut } from 'next-auth/react'
 import { useState, useEffect } from 'react'
 import { usePathname } from 'next/navigation'
 
-export function OrangeTopHeader() {
+export function OrangeTopHeader({ farmName = '오늘의귤' }: { farmName?: string }) {
   const { data: session, status } = useSession()
   const pathname = usePathname()
   const [showMenu, setShowMenu] = useState(false)
@@ -16,6 +16,8 @@ export function OrangeTopHeader() {
   useEffect(() => {
     if (isLoggedIn) {
       fetchCartCount()
+      window.addEventListener('cart-updated', fetchCartCount)
+      return () => window.removeEventListener('cart-updated', fetchCartCount)
     } else {
       setCartCount(0)
     }
@@ -46,8 +48,8 @@ export function OrangeTopHeader() {
           style={{ fontFamily: "'Noto Serif KR', serif" }}
         >
           <span className="text-2xl">🍊</span>
-          <span className="text-lg md:text-xl font-black text-orange-500 tracking-tight">
-            오늘의귤
+          <span className="max-w-[45vw] truncate text-lg md:text-xl font-black text-orange-500 tracking-tight">
+            {farmName}
           </span>
         </Link>
 

@@ -1,4 +1,5 @@
-import { auth } from '@/auth'
+import { transitionOrder, OrderStateConflict } from '@/lib/order-state'
+import { adminAuth } from '@/lib/admin-auth'
 import { prisma } from '@/lib/prisma'
 import { NextResponse } from 'next/server'
 import { writeAuditLogTx } from '@/lib/audit-log'
@@ -15,7 +16,7 @@ interface RouteParams {
 
 export async function POST(req: Request, { params }: RouteParams) {
   try {
-    const session = await auth()
+    const session = await adminAuth()
     const { id } = await params
 
     if (!session?.user || session.user.role !== 'ADMIN') {
@@ -50,7 +51,9 @@ export async function POST(req: Request, { params }: RouteParams) {
         return NextResponse.json({ error: '배송할 아이템이 없습니다.' }, { status: 400 })
       }
       for (const si of shipItems) {
-        if (!si.carrier || !si.trackingNumber) {
+        if (!si || typeof si.carrier !== 'string' || !si.carrier.trim() ||
+          typeof si.trackingNumber !== 'string' || !si.trackingNumber.trim() ||
+          !order.items.some((item) => item.id === si.orderItemId)) {
           return NextResponse.json(
             { error: '각 아이템에 택배사와 송장번호를 입력해주세요.' },
             { status: 400 }
@@ -59,7 +62,7 @@ export async function POST(req: Request, { params }: RouteParams) {
       }
     } else {
       const { carrier, trackingNumber } = body as { carrier?: string; trackingNumber?: string }
-      if (!carrier || !trackingNumber) {
+      if (typeof carrier !== 'string' || !carrier.trim() || typeof trackingNumber !== 'string' || !trackingNumber.trim()) {
         return NextResponse.json({ error: '택배사와 송장번호를 입력해주세요.' }, { status: 400 })
       }
       shipItems = order.items.map((item) => ({
@@ -69,7 +72,12 @@ export async function POST(req: Request, { params }: RouteParams) {
       }))
     }
 
+    if (new Set(shipItems.map((item) => item.orderItemId)).size !== shipItems.length) {
+      return NextResponse.json({ error: '배송 상품이 중복되었습니다.' }, { status: 400 })
+    }
+
     await prisma.$transaction(async (tx) => {
+      await transitionOrder(tx, id, order.status, { status: 'SHIPPING' })
       const now = new Date()
 
       for (const si of shipItems) {
@@ -86,10 +94,6 @@ export async function POST(req: Request, { params }: RouteParams) {
         })
       }
 
-      await tx.order.update({
-        where: { id },
-        data: { status: 'SHIPPING' },
-      })
 
       await writeAuditLogTx(tx, {
         adminId: session.user.id,
@@ -103,6 +107,9 @@ export async function POST(req: Request, { params }: RouteParams) {
 
     return NextResponse.json({ success: true })
   } catch (error) {
+    if (error instanceof OrderStateConflict) {
+      return NextResponse.json({ error: error.message }, { status: 409 })
+    }
     console.error('배송처리 오류:', error)
     return NextResponse.json({ error: '처리에 실패했습니다.' }, { status: 500 })
   }

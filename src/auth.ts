@@ -3,6 +3,7 @@ import Google from 'next-auth/providers/google'
 import Naver from 'next-auth/providers/naver'
 import Kakao from 'next-auth/providers/kakao'
 import { prisma } from '@/lib/prisma'
+import { safeRedirect } from '@/lib/redirect'
 
 const ADMIN_EMAILS: string[] = process.env.ADMIN_EMAILS
   ? process.env.ADMIN_EMAILS.split(',').map((e) => e.trim()).filter(Boolean)
@@ -79,13 +80,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
             },
           })
         } else {
-          // 기존 사용자: 관리자 이메일이면 role 업데이트
-          if (isAdmin && existingUser.role !== 'ADMIN') {
-            await prisma.user.update({
-              where: { id: existingUser.id },
-              data: { role: 'ADMIN' },
-            })
-          }
+          // 기존 계정의 권한은 DB가 기준이다. 회수된 권한을 재로그인 때 복원하지 않는다.
 
           // Account 연결 확인
           const existingAccount = await prisma.account.findUnique({
@@ -153,8 +148,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           token.addressBase = dbUser.addressBase
           token.addressDetail = dbUser.addressDetail
           token.profileComplete = dbUser.profileComplete
-          // DB에서 role 가져오되, ADMIN_EMAILS에 포함되면 ADMIN으로 강제 설정
-          token.role = ADMIN_EMAILS.includes(dbUser.email || '') ? 'ADMIN' : dbUser.role
+          token.role = dbUser.role
         }
       }
 
@@ -193,9 +187,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     },
 
     async redirect({ url, baseUrl }) {
-      if (url.startsWith(baseUrl)) return url
-      if (url.startsWith('/')) return `${baseUrl}${url}`
-      return baseUrl
+      return safeRedirect(url, baseUrl)
     },
   },
   pages: {

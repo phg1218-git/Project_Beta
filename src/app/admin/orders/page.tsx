@@ -1,4 +1,4 @@
-import { auth } from '@/auth'
+import { adminAuth } from '@/lib/admin-auth'
 import { prisma } from '@/lib/prisma'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
@@ -62,7 +62,7 @@ const STATUS_TABS = [
 ]
 
 export default async function AdminOrdersPage({ searchParams }: PageProps) {
-  const session = await auth()
+  const session = await adminAuth()
   if (!session?.user || session.user.role !== 'ADMIN') {
     redirect('/')
   }

@@ -60,7 +60,7 @@ export default async function ProductsPage({ searchParams }: PageProps) {
       {/* 페이지 헤더 */}
       <div className="px-4 py-4 bg-white border-b border-gray-200">
         <h1 className="text-xl font-bold">🍊 전체 상품</h1>
-        <p className="text-sm text-gray-500 mt-1">오늘 수확한 신선한 귤을 만나보세요</p>
+        <p className="text-sm text-gray-500 mt-1">우리 농장에서 판매 중인 귤을 만나보세요</p>
       </div>
 
       {/* 검색 */}

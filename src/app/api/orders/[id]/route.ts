@@ -1,3 +1,4 @@
+import { transitionOrder, OrderStateConflict } from '@/lib/order-state'
 import { auth } from '@/auth'
 import { prisma } from '@/lib/prisma'
 import { NextResponse } from 'next/server'
@@ -78,6 +79,9 @@ export async function DELETE(req: Request, { params }: RouteParams) {
 
     // 트랜잭션으로 주문 취소 + 재고 복구
     await prisma.$transaction(async (tx) => {
+      await transitionOrder(tx, id, 'DRAFT', {
+        status: 'CANCELED', canceledAt: new Date(), cancelReason: '사용자 취소',
+      }, { userId: session.user.id })
       // 재고 복구
       for (const item of order.items) {
         await tx.product.update({
@@ -88,19 +92,13 @@ export async function DELETE(req: Request, { params }: RouteParams) {
         })
       }
 
-      // 주문 상태 변경
-      await tx.order.update({
-        where: { id },
-        data: {
-          status: 'CANCELED',
-          canceledAt: new Date(),
-          cancelReason: '사용자 취소',
-        },
-      })
     })
 
     return NextResponse.json({ success: true })
   } catch (error) {
+    if (error instanceof OrderStateConflict) {
+      return NextResponse.json({ error: error.message }, { status: 409 })
+    }
     console.error('주문 취소 오류:', error)
     return NextResponse.json(
       { error: '주문 취소 중 오류가 발생했습니다.' },

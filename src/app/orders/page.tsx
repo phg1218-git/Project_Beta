@@ -8,7 +8,6 @@ import { Prisma } from '@prisma/client'
 
 export const dynamic = 'force-dynamic'
 
-const BANK_ACCOUNT_INFO = process.env.BANK_ACCOUNT_INFO || '농협 000-0000-0000-00 (오늘의귤)'
 const PAGE_SIZE = 20
 
 interface PageProps {
@@ -110,8 +109,7 @@ export default async function OrdersPage({ searchParams }: PageProps) {
       <div className="px-4 py-4 bg-gradient-to-r from-orange-50 to-yellow-50 border-b border-orange-200">
         <div className="bg-white rounded-xl p-4 shadow-sm border border-orange-100">
           <p className="text-center text-xs text-orange-600 font-semibold mb-1">💳 입금 계좌 안내</p>
-          <p className="text-center text-base font-bold text-gray-900">{BANK_ACCOUNT_INFO}</p>
-          <p className="text-center text-xs text-gray-500 mt-1">예금주: 오늘의귤</p>
+          <p className="text-center text-sm text-gray-700">각 주문의 상세 화면에서 입금 계좌와 금액을 확인해주세요.</p>
         </div>
       </div>
 

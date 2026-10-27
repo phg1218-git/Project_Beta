@@ -3,35 +3,20 @@ import '@/styles/globals.css'
 import { OrangeTopHeader } from '@/components/OrangeTopHeader'
 import { CitrusBottomTabBar } from '@/components/CitrusBottomTabBar'
 import { SessionProvider } from 'next-auth/react'
+import { getStoreSettings } from '@/lib/store-settings'
+
+export const dynamic = 'force-dynamic'
 
 const SITE_URL = process.env.AUTH_URL || 'https://dailycitrus.netlify.app'
-const OG_IMAGE = `${SITE_URL}/og-image.png`
-
-export const metadata: Metadata = {
-  metadataBase: new URL(SITE_URL),
-  title: {
-    default: '오늘의귤 — 제주 산지 직송 감귤',
-    template: '%s | 오늘의귤',
-  },
-  description: '제주 산지 직송 귤 판매 서비스 — 오늘 수확한 귤, 내일 문 앞에. 당도 보장, 익일 배송, GAP 인증.',
-  keywords: ['제주귤', '감귤', '산지직송', '오늘의귤', '귤 선물', 'dailycitrus'],
-  authors: [{ name: '오늘의귤' }],
-  icons: { icon: '/favicon.ico', apple: '/apple-touch-icon.png' },
-  openGraph: {
-    type: 'website',
-    locale: 'ko_KR',
-    url: SITE_URL,
-    siteName: '오늘의귤',
-    title: '오늘의귤 — 제주 산지 직송 감귤',
-    description: '오늘 수확한 제주 귤을 내일 문 앞에서 만나보세요.',
-    images: [{ url: OG_IMAGE, width: 1200, height: 630, alt: '오늘의귤' }],
-  },
-  twitter: {
-    card: 'summary_large_image',
-    title: '오늘의귤 — 제주 산지 직송 감귤',
-    description: '오늘 수확한 제주 귤을 내일 문 앞에서 만나보세요.',
-    images: [OG_IMAGE],
-  },
+export async function generateMetadata(): Promise<Metadata> {
+  const settings = await getStoreSettings()
+  const description = settings.introduction.slice(0, 160) || '우리 가족이 키운 귤을 만나보세요.'
+  return {
+    metadataBase: new URL(SITE_URL),
+    title: { default: settings.farmName, template: `%s | ${settings.farmName}` },
+    description,
+    openGraph: { type: 'website', locale: 'ko_KR', url: SITE_URL, siteName: settings.farmName, title: settings.farmName, description },
+  }
 }
 
 export const viewport: Viewport = {
@@ -41,11 +26,12 @@ export const viewport: Viewport = {
   themeColor: '#FF8A00',
 }
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: {
   children: React.ReactNode
 }) {
+  const settings = await getStoreSettings()
   return (
     <html lang="ko">
       <head>
@@ -59,7 +45,7 @@ export default function RootLayout({
       <body>
         <SessionProvider>
           {/* 상단 헤더 */}
-          <OrangeTopHeader />
+          <OrangeTopHeader farmName={settings.farmName} />
 
           {/* 페이지 콘텐츠 */}
           <main>{children}</main>

@@ -1,21 +1,26 @@
-import { auth } from '@/auth'
+import { adminAuth } from '@/lib/admin-auth'
 import { prisma } from '@/lib/prisma'
 import { NextResponse } from 'next/server'
 import { writeAuditLog } from '@/lib/audit-log'
+import { transitionOrder, OrderStateConflict } from '@/lib/order-state'
 
 export async function POST() {
   try {
-    const session = await auth()
+    const session = await adminAuth()
 
     if (!session?.user || session.user.role !== 'ADMIN') {
       return NextResponse.json({ error: '권한이 없습니다.' }, { status: 403 })
     }
 
-    const timeoutHours = parseInt(process.env.DEPOSIT_TIMEOUT_HOURS ?? '24', 10)
+    const timeoutHours = Number(process.env.DEPOSIT_TIMEOUT_HOURS ?? '24')
+    if (!Number.isFinite(timeoutHours) || timeoutHours <= 0 || timeoutHours > 8760) {
+      throw new Error('Invalid DEPOSIT_TIMEOUT_HOURS')
+    }
     const cutoff = new Date(Date.now() - timeoutHours * 60 * 60 * 1000)
 
     const candidates = await prisma.order.findMany({
-      where: { status: { in: ['DRAFT', 'DEPOSIT_REQUESTED'] } },
+      // 입금했다고 알린 주문은 관리자가 실제 입금 여부를 확인해야 한다.
+      where: { status: 'DRAFT', createdAt: { lte: cutoff } },
       include: { items: true },
     })
 
@@ -28,39 +33,33 @@ export async function POST() {
 
     for (const order of candidates) {
       try {
-        const referenceTime: Date =
-          order.status === 'DEPOSIT_REQUESTED'
-            ? (order.requestedDepositAt ?? order.updatedAt)
-            : order.createdAt
-
-        if (referenceTime > cutoff) {
-          skipped++
-          continue
-        }
-
         expired++
 
-        await prisma.$transaction(async (tx) => {
-          await tx.order.update({
-            where: { id: order.id },
-            data: {
-              status: 'CANCELED',
-              canceledAt: new Date(),
-              cancelReason: '입금기한 만료 자동취소',
-            },
-          })
+        const restored = await prisma.$transaction(async (tx) => {
+          await transitionOrder(tx, order.id, 'DRAFT', {
+            status: 'CANCELED',
+            canceledAt: new Date(),
+            cancelReason: '입금기한 만료 자동취소',
+          }, { createdAt: { lte: cutoff } })
 
+          let quantity = 0
           for (const item of order.items) {
             await tx.product.update({
               where: { id: item.productId },
               data: { stock: { increment: item.quantity } },
             })
-            restoredStock += item.quantity
+            quantity += item.quantity
           }
+          return quantity
         })
 
+        restoredStock += restored
         canceled++
       } catch (err) {
+        if (err instanceof OrderStateConflict) {
+          skipped++
+          continue
+        }
         errors.push(`order:${order.id} - ${err instanceof Error ? err.message : String(err)}`)
       }
     }

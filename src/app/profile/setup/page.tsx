@@ -1,8 +1,9 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, Suspense } from 'react'
 import { useSession } from 'next-auth/react'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
+import { safeReturnPath } from '@/lib/redirect'
 import { AddressSearch } from '@/components/AddressSearch'
 import { formatPhoneNumber, isValidPhoneNumber } from '@/lib/utils'
 
@@ -20,7 +21,9 @@ interface FormErrors {
   general?: string
 }
 
-export default function ProfileSetupPage() {
+function ProfileSetupContent() {
+  const searchParams = useSearchParams()
+  const callbackUrl = safeReturnPath(searchParams.get('callbackUrl'), '/cart')
   const { data: session, status, update } = useSession()
   const router = useRouter()
   
@@ -47,9 +50,9 @@ export default function ProfileSetupPage() {
   // 이미 프로필 완성된 사용자는 메인으로 리다이렉트
   useEffect(() => {
     if (status === 'authenticated' && session?.user?.profileComplete) {
-      router.replace('/products')
+      router.replace(callbackUrl)
     }
-  }, [status, session, router])
+  }, [status, session, router, callbackUrl])
 
   // 로딩 중
   if (status === 'loading') {
@@ -162,7 +165,7 @@ export default function ProfileSetupPage() {
       })
 
       // 성공 시 메인 페이지로 이동
-      router.replace('/products')
+      router.replace(callbackUrl)
     } catch (error) {
       console.error('프로필 저장 오류:', error)
       setErrors({ general: '네트워크 오류가 발생했습니다. 잠시 후 다시 시도해주세요.' })
@@ -345,4 +348,7 @@ export default function ProfileSetupPage() {
       </form>
     </div>
   )
+}
+export default function ProfileSetupPage() {
+  return <Suspense fallback={<p className="p-6 text-center">배송 정보 준비 중...</p>}><ProfileSetupContent /></Suspense>
 }

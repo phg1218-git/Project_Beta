@@ -1,4 +1,5 @@
-import { auth } from '@/auth'
+import { transitionOrder, OrderStateConflict } from '@/lib/order-state'
+import { adminAuth } from '@/lib/admin-auth'
 import { prisma } from '@/lib/prisma'
 import { NextResponse } from 'next/server'
 import { writeAuditLogTx } from '@/lib/audit-log'
@@ -9,7 +10,7 @@ interface RouteParams {
 
 export async function POST(_req: Request, { params }: RouteParams) {
   try {
-    const session = await auth()
+    const session = await adminAuth()
     const { id } = await params
 
     if (!session?.user || session.user.role !== 'ADMIN') {
@@ -27,10 +28,7 @@ export async function POST(_req: Request, { params }: RouteParams) {
     }
 
     await prisma.$transaction(async (tx) => {
-      await tx.order.update({
-        where: { id },
-        data: { status: 'PAYMENT_CONFIRMED', paidAt: new Date() },
-      })
+      await transitionOrder(tx, id, 'DEPOSIT_REQUESTED', { status: 'PAYMENT_CONFIRMED', paidAt: new Date() })
 
       await tx.paymentRequest.update({
         where: { orderId: id },
@@ -49,6 +47,9 @@ export async function POST(_req: Request, { params }: RouteParams) {
 
     return NextResponse.json({ success: true })
   } catch (error) {
+    if (error instanceof OrderStateConflict) {
+      return NextResponse.json({ error: error.message }, { status: 409 })
+    }
     console.error('입금확인 처리 오류:', error)
     return NextResponse.json({ error: '처리에 실패했습니다.' }, { status: 500 })
   }

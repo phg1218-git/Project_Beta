@@ -3,6 +3,12 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
+    "test": "node --test tests/*.test.mjs",
+    "typecheck": "tsc --noEmit --incremental false",
+    "db:apply:dev": "node scripts/development.mjs apply",
+    "test:integration": "node scripts/development.mjs test",
+    "build:dev": "node scripts/development.mjs build",
+    "start:dev": "node scripts/development.mjs start",
     "postinstall": "prisma generate",
     "dev": "next dev",
     "build": "next build",

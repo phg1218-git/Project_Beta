@@ -1,4 +1,4 @@
-import { auth } from '@/auth'
+import { adminAuth } from '@/lib/admin-auth'
 import { prisma } from '@/lib/prisma'
 import { redirect } from 'next/navigation'
 import { formatPhoneNumber } from '@/lib/utils'
@@ -21,7 +21,7 @@ async function getMembers() {
 }
 
 export default async function AdminMembersPage() {
-  const session = await auth()
+  const session = await adminAuth()
   if (!session?.user || session.user.role !== 'ADMIN') {
     redirect('/')
   }

@@ -1,4 +1,4 @@
-import { auth } from '@/auth'
+import { adminAuth } from '@/lib/admin-auth'
 import { prisma } from '@/lib/prisma'
 import { NextResponse } from 'next/server'
 
@@ -9,7 +9,7 @@ interface RouteParams {
 // 상품 단건 조회 (수정 폼 초기화용)
 export async function GET(_req: Request, { params }: RouteParams) {
   try {
-    const session = await auth()
+    const session = await adminAuth()
     const { id } = await params
 
     if (!session?.user || session.user.role !== 'ADMIN') {
@@ -31,7 +31,7 @@ export async function GET(_req: Request, { params }: RouteParams) {
 // 상품 수정
 export async function PATCH(req: Request, { params }: RouteParams) {
   try {
-    const session = await auth()
+    const session = await adminAuth()
     const { id } = await params
 
     if (!session?.user || session.user.role !== 'ADMIN') {
@@ -82,7 +82,7 @@ export async function PATCH(req: Request, { params }: RouteParams) {
 // 상품 삭제
 export async function DELETE(req: Request, { params }: RouteParams) {
   try {
-    const session = await auth()
+    const session = await adminAuth()
     const { id } = await params
 
     if (!session?.user || session.user.role !== 'ADMIN') {

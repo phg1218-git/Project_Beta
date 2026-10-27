@@ -1,3 +1,4 @@
+import { transitionOrder, OrderStateConflict } from '@/lib/order-state'
 import { auth } from '@/auth'
 import { prisma } from '@/lib/prisma'
 import { NextResponse } from 'next/server'
@@ -39,13 +40,10 @@ export async function POST(req: Request, { params }: RouteParams) {
 
     // 트랜잭션으로 상태 변경 + PaymentRequest 생성
     await prisma.$transaction(async (tx) => {
-      await tx.order.update({
-        where: { id },
-        data: {
+      await transitionOrder(tx, id, 'DRAFT', {
           status: 'DEPOSIT_REQUESTED',
           requestedDepositAt: new Date(),
-        },
-      })
+        })
 
       await tx.paymentRequest.create({
         data: {
@@ -57,6 +55,9 @@ export async function POST(req: Request, { params }: RouteParams) {
 
     return NextResponse.json({ success: true })
   } catch (error) {
+    if (error instanceof OrderStateConflict) {
+      return NextResponse.json({ error: error.message }, { status: 409 })
+    }
     console.error('입금확인 요청 오류:', error)
     return NextResponse.json(
       { error: '입금확인 요청 중 오류가 발생했습니다.' },

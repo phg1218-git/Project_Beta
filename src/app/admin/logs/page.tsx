@@ -1,4 +1,4 @@
-import { auth } from '@/auth'
+import { adminAuth } from '@/lib/admin-auth'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 
@@ -66,7 +66,7 @@ async function getLogs(params: URLSearchParams): Promise<{ logs: LogEntry[]; tot
 }
 
 export default async function AdminLogsPage({ searchParams }: PageProps) {
-  const session = await auth()
+  const session = await adminAuth()
   if (!session?.user || session.user.role !== 'ADMIN') redirect('/')
 
   const params = await searchParams

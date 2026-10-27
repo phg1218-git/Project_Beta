@@ -9,7 +9,7 @@ import { ShippingInfo } from '@/components/ShippingInfo'
 export const dynamic = 'force-dynamic'
 
 // 환경변수에서 계좌 정보 가져오기
-const BANK_ACCOUNT_INFO = process.env.BANK_ACCOUNT_INFO || '농협 000-0000-0000-00 (오늘의귤)'
+const BANK_ACCOUNT_INFO = process.env.BANK_ACCOUNT_INFO || '고객센터에 문의해주세요.'
 
 interface PageProps {
   params: Promise<{ id: string }>
@@ -64,7 +64,7 @@ export default async function OrderDetailPage({ params }: PageProps) {
               💳 입금 계좌
             </p>
             <p className="text-center text-sm font-bold text-gray-900">
-              {BANK_ACCOUNT_INFO}
+              {order.bankAccountSnapshot || BANK_ACCOUNT_INFO}
             </p>
           </div>
         </div>
@@ -206,11 +206,11 @@ export default async function OrderDetailPage({ params }: PageProps) {
         <div className="bg-white rounded-2xl shadow-sm p-4">
           <div className="flex justify-between items-center mb-3">
             <span className="text-gray-600">상품 금액</span>
-            <span className="font-semibold">{formatPrice(order.totalAmount)}</span>
+            <span className="font-semibold">{formatPrice(order.totalAmount - order.shippingFee)}</span>
           </div>
           <div className="flex justify-between items-center mb-3">
             <span className="text-gray-600">배송비</span>
-            <span className="font-semibold text-green-600">무료</span>
+            <span className="font-semibold">{order.shippingFee === 0 ? '무료' : formatPrice(order.shippingFee)}</span>
           </div>
           <div className="border-t border-gray-100 pt-3 flex justify-between items-center">
             <span className="font-bold text-gray-900">총 결제금액</span>

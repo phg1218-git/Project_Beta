@@ -1,4 +1,4 @@
-import { auth } from '@/auth'
+import { adminAuth } from '@/lib/admin-auth'
 import { prisma } from '@/lib/prisma'
 import { redirect } from 'next/navigation'
 import { formatPrice } from '@/lib/utils'
@@ -42,7 +42,7 @@ async function getProducts(q: string, isActive: string, lowStock: boolean, page:
 }
 
 export default async function AdminProductsPage({ searchParams }: PageProps) {
-  const session = await auth()
+  const session = await adminAuth()
   if (!session?.user || session.user.role !== 'ADMIN') {
     redirect('/')
   }

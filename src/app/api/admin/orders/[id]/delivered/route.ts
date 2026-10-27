@@ -1,4 +1,5 @@
-import { auth } from '@/auth'
+import { transitionOrder, OrderStateConflict } from '@/lib/order-state'
+import { adminAuth } from '@/lib/admin-auth'
 import { prisma } from '@/lib/prisma'
 import { NextResponse } from 'next/server'
 import { writeAuditLogTx } from '@/lib/audit-log'
@@ -9,7 +10,7 @@ interface RouteParams {
 
 export async function POST(_req: Request, { params }: RouteParams) {
   try {
-    const session = await auth()
+    const session = await adminAuth()
     const { id } = await params
 
     if (!session?.user || session.user.role !== 'ADMIN') {
@@ -45,6 +46,7 @@ export async function POST(_req: Request, { params }: RouteParams) {
     }
 
     await prisma.$transaction(async (tx) => {
+      await transitionOrder(tx, id, 'SHIPPING', { status: 'DELIVERED' })
       const now = new Date()
 
       // shippedAt이 있는 아이템만 deliveredAt 설정 (방어 코드)
@@ -53,10 +55,6 @@ export async function POST(_req: Request, { params }: RouteParams) {
         data: { deliveredAt: now },
       })
 
-      await tx.order.update({
-        where: { id },
-        data: { status: 'DELIVERED' },
-      })
 
       await writeAuditLogTx(tx, {
         adminId: session.user.id,
@@ -70,6 +68,9 @@ export async function POST(_req: Request, { params }: RouteParams) {
 
     return NextResponse.json({ success: true })
   } catch (error) {
+    if (error instanceof OrderStateConflict) {
+      return NextResponse.json({ error: error.message }, { status: 409 })
+    }
     console.error('배송완료 처리 오류:', error)
     return NextResponse.json({ error: '처리에 실패했습니다.' }, { status: 500 })
   }

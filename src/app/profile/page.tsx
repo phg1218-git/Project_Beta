@@ -86,9 +86,7 @@ export default function ProfilePage() {
       )}
 
       <MenuSection title="서비스">
-        <MenuItem icon="💬" label="고객센터" />
-        <MenuItem icon="📄" label="이용약관" />
-        <MenuItem icon="🔐" label="개인정보처리방침" />
+        <MenuItem icon="💬" label="배송·고객 안내" href="/support" />
       </MenuSection>
 
       {/* 로그아웃 버튼 */}

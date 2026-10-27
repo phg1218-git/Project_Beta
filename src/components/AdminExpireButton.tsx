@@ -16,7 +16,7 @@ export function AdminExpireButton() {
   const [result, setResult] = useState<ExpireResult | null>(null)
 
   const handleExpire = async () => {
-    if (!confirm('만료된 입금 대기 주문을 자동취소하고 재고를 복구하시겠습니까?')) return
+    if (!confirm('입금확인 요청 전인 만료 주문만 취소하고 재고를 복구합니다. 이미 입금한 고객이 없는지 확인하셨나요?')) return
 
     setIsLoading(true)
     setResult(null)

@@ -4,6 +4,7 @@ import { signIn, useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
 import { useEffect, Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'
+import { safeReturnPath } from '@/lib/redirect'
 
 // Auth.js v5 에러 코드 → 한국어 메시지
 // NoEmail / ServerError 는 auth.ts signIn 콜백에서 직접 리다이렉트하는 커스텀 코드
@@ -42,26 +43,28 @@ function ErrorBanner() {
   )
 }
 
-export default function LoginPage() {
+function LoginContent() {
+  const searchParams = useSearchParams()
+  const callbackUrl = safeReturnPath(searchParams.get('callbackUrl'))
   const { status } = useSession()
   const router = useRouter()
 
   useEffect(() => {
     if (status === 'authenticated') {
-      router.replace('/products')
+      router.replace(callbackUrl)
     }
-  }, [status, router])
+  }, [status, router, callbackUrl])
 
   const handleGoogleLogin = () => {
-    signIn('google', { callbackUrl: '/' })
+    signIn('google', { callbackUrl })
   }
 
   const handleNaverLogin = () => {
-    signIn('naver', { callbackUrl: '/' })
+    signIn('naver', { callbackUrl })
   }
 
   const handleKakaoLogin = () => {
-    signIn('kakao', { callbackUrl: '/' })
+    signIn('kakao', { callbackUrl })
   }
 
   if (status === 'loading' || status === 'authenticated') {
@@ -83,7 +86,7 @@ export default function LoginPage() {
         >
           오늘의귤
         </h1>
-        <p className="text-gray-500 text-sm">제주에서 온 달콤한 선물</p>
+        <p className="text-gray-500 text-sm">우리 가족이 키운 귤을 만나보세요</p>
       </div>
 
       {/* Auth.js 에러 메시지 (?error= 쿼리 파라미터) */}
@@ -119,7 +122,7 @@ export default function LoginPage() {
       </div>
 
       <p className="mt-6 text-xs text-gray-500 text-center leading-relaxed">
-        최초 로그인 시 기본 정보를 입력합니다
+        배송 정보는 주문할 때 입력합니다
       </p>
     </div>
   )
@@ -184,4 +187,8 @@ function KakaoIcon() {
       </text>
     </svg>
   )
+}
+
+export default function LoginPage() {
+  return <Suspense fallback={<p className="p-6 text-center">로그인 준비 중...</p>}><LoginContent /></Suspense>
 }

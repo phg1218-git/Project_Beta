@@ -4,6 +4,9 @@
 import Link from 'next/link'
 import { prisma } from '@/lib/prisma'
 import { AdminExpireButton } from '@/components/AdminExpireButton'
+import { adminAuth } from '@/lib/admin-auth'
+import { redirect } from 'next/navigation'
+import { revenuePeriod } from '@/lib/revenue-period'
 
 export const dynamic = 'force-dynamic'
 export const revalidate = 0
@@ -29,13 +32,12 @@ async function getDashboardStats() {
     ])
 
     // 이번 달 수익 계산
-    const now = new Date()
-    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1)
+    const { startOfMonth, startOfNextMonth } = revenuePeriod()
     const monthlyRevenue = await prisma.order.aggregate({
       _sum: { totalAmount: true },
       where: {
         status: { in: ['PAYMENT_CONFIRMED', 'SHIPPING', 'DELIVERED'] },
-        paidAt: { gte: startOfMonth },
+        paidAt: { gte: startOfMonth, lt: startOfNextMonth },
       },
     })
 
@@ -55,6 +57,7 @@ async function getDashboardStats() {
 }
 
 export default async function AdminDashboardPage() {
+  if (!await adminAuth()) redirect('/')
   const stats = await getDashboardStats()
 
   const statCards = [
@@ -116,7 +119,7 @@ export default async function AdminDashboardPage() {
         <div>
           <p className="font-semibold text-gray-900">만료 주문 자동취소</p>
           <p className="text-xs text-gray-500 mt-0.5">
-            입금기한이 지난 DRAFT/입금확인요청 주문을 취소하고 재고를 복구합니다.
+            입금확인 요청 전인 만료 주문만 취소합니다. 입금확인 대기 주문은 유지합니다.
           </p>
         </div>
         <AdminExpireButton />
@@ -128,6 +131,7 @@ export default async function AdminDashboardPage() {
         <QuickAction href="/admin/products" icon="🍊" label="상품 관리" desc="등록 · 수정 · 삭제" />
         <QuickAction href="/admin/revenue" icon="💰" label="수익 통계" desc="일별 · 주별 · 월별" />
         <QuickAction href="/admin/members" icon="👥" label="회원 관리" desc="회원 조회 · 관리" />
+        <QuickAction href="/admin/settings" icon="⚙️" label="농장·판매 설정" desc="소개 · 연락처 · 배송 · 인증" />
         <QuickAction href="/admin/logs" icon="🗒️" label="액션 로그" desc="관리자 이력 조회" />
       </div>
 

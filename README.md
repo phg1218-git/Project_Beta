@@ -8,7 +8,7 @@
 
 | 구분 | 기술 |
 |------|------|
-| Framework | Next.js 14 (App Router) |
+| Framework | Next.js 15 (App Router) |
 | Language | TypeScript |
 | Styling | Tailwind CSS + CSS Variables |
 | ORM | Prisma |
@@ -119,6 +119,17 @@ DRAFT → DEPOSIT_REQUESTED → PAYMENT_CONFIRMED → SHIPPING → DELIVERED
 - `role: ADMIN` 계정만 `/admin/*` 접근 가능
 - 헤더에 "관리자페이지" 버튼 노출 (일반 USER는 미노출)
 - Prisma Studio에서 직접 role 변경: `npm run db:studio`
+- `ADMIN_EMAILS`는 새 계정 생성 시 초기 권한에만 사용합니다. 기존 계정 권한은 DB가 기준이며 재로그인으로 회수된 권한을 복원하지 않습니다.
+
+## 고도화 및 판매 설정
+
+- 작업 순서와 진행 상태: [고도화 계획](docs/UPGRADE_PLAN.md)
+- 관리자 → **농장·판매 설정** (`/admin/settings`)에서 농장 정보, 고객센터, 계좌, 출고/파손 안내, 배송비, GAP 표시, 약관을 수정합니다.
+- 인증 여부를 모르면 GAP 표시를 꺼두세요. 기본값은 숨김이며 미입력 항목은 공개하지 않습니다.
+- 배송비는 주문 1건당 정액입니다. 설정 변경은 새 주문부터 적용하며 기존 주문에는 저장된 배송비/계좌를 사용합니다.
+- 일반 고객은 `/support`에서 판매 안내를 확인합니다. 약관/개인정보처리방침은 내용 입력 후 링크가 표시됩니다.
+- `npm test`, `npm run typecheck`, `npm run lint`, `npm run build`로 검증합니다.
+- DB 적용 절차와 주의점은 [DB 변경 안내](docs/DATABASE_UPDATE.md)를 확인하세요.
 
 ---
 

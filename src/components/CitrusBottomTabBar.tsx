@@ -20,6 +20,8 @@ export function CitrusBottomTabBar() {
   useEffect(() => {
     if (session?.user) {
       fetchCartCount()
+      window.addEventListener('cart-updated', fetchCartCount)
+      return () => window.removeEventListener('cart-updated', fetchCartCount)
     } else {
       setCartCount(0)
     }
