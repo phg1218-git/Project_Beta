@@ -111,6 +111,7 @@ model Order {
   user                User            @relation(fields: [userId], references: [id])
   status              OrderStatus     @default(DRAFT)
   totalAmount         Int
+  shippingFee         Int             @default(0)
   depositorName       String?
   bankAccountSnapshot String?
   requestedDepositAt  DateTime?
@@ -195,4 +196,18 @@ model CartItem {
   product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
 
   @@unique([userId, productId])
+}
+
+model SiteContent {
+ id String @id
+ data Json
+ updatedAt DateTime @updatedAt
+}
+
+// 농장·판매 설정 (version: 낙관적 잠금)
+model StoreSettings {
+  id        String   @id
+  data      Json
+  version   Int      @default(1)
+  updatedAt DateTime @updatedAt
 }

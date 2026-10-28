@@ -1,7 +1,8 @@
-import { auth } from '@/auth'
+import { adminAuth } from '@/lib/admin-auth'
 import { prisma } from '@/lib/prisma'
 import { redirect } from 'next/navigation'
 import { formatPhoneNumber } from '@/lib/utils'
+import { AdminWithdrawButton } from '@/components/AdminWithdrawButton'
 
 export const dynamic = 'force-dynamic'
 
@@ -21,7 +22,7 @@ async function getMembers() {
 }
 
 export default async function AdminMembersPage() {
-  const session = await auth()
+  const session = await adminAuth()
   if (!session?.user || session.user.role !== 'ADMIN') {
     redirect('/')
   }
@@ -32,7 +33,7 @@ export default async function AdminMembersPage() {
     <div className="p-4 md:p-8">
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-gray-900">👥 회원 관리</h1>
-        <p className="text-gray-500 mt-1">전체 회원 {members.length}명</p>
+        <p className="text-gray-500 mt-1">전체 회원 {members.length}명 · 전화·이메일로 받은 탈퇴 요청은 본인 확인 후 &apos;탈퇴 처리&apos;로 진행합니다.</p>
       </div>
 
       {/* 회원 목록 */}
@@ -52,6 +53,7 @@ export default async function AdminMembersPage() {
                   <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600">주문수</th>
                   <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600">권한</th>
                   <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600">가입일</th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600">탈퇴</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
@@ -73,7 +75,7 @@ export default async function AdminMembersPage() {
                         </div>
                         <div>
                           <p className="text-sm font-medium text-gray-900">
-                            {member.name || '이름 없음'}
+                            {member.email ? member.name || '이름 없음' : '탈퇴 회원 (주문 기록 보존)'}
                           </p>
                           <p className="text-xs text-gray-500">{member.email}</p>
                         </div>
@@ -107,6 +109,11 @@ export default async function AdminMembersPage() {
                       <span className="text-sm text-gray-500">
                         {new Date(member.createdAt).toLocaleDateString('ko-KR')}
                       </span>
+                    </td>
+                    <td className="px-4 py-3">
+                      {member.email && member.role !== 'ADMIN' && (
+                        <AdminWithdrawButton userId={member.id} name={member.name || member.email} />
+                      )}
                     </td>
                   </tr>
                 ))}

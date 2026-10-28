@@ -8,11 +8,12 @@
 
 | 구분 | 기술 |
 |------|------|
-| Framework | Next.js 14 (App Router) |
+| Framework | Next.js 15 (App Router), React 18 |
 | Language | TypeScript |
 | Styling | Tailwind CSS + CSS Variables |
-| ORM | Prisma |
-| Database | PostgreSQL |
+| ORM | Prisma 5 (`prisma/migrations`) |
+| Database | PostgreSQL (Neon) |
+| Runtime | Node 22 (`.nvmrc`), Netlify 배포 |
 | Auth | Auth.js v5 (Google / Naver / Kakao) |
 
 ---
@@ -34,10 +35,15 @@ cp .env.example .env.local
 
 ### 3. DB 마이그레이션
 
+> ⚠️ `.env.local`의 DB가 운영 DB와 같을 수 있습니다. 운영 DB에는 `db push`·`migrate dev`·`migrate reset`을 실행하지 마세요.
+> 절차는 [docs/DATABASE.md](docs/DATABASE.md)를 따릅니다 (운영: `prisma migrate deploy`, 테스트 DB 분리).
+
+### 테스트
+
 ```bash
-npm run db:push      # 개발용 빠른 적용
-# 또는
-npm run db:migrate   # 마이그레이션 파일 생성
+npm test                 # 단위 테스트 (DB 연결 없음)
+npm run typecheck
+npm run test:integration # TEST_DATABASE_URL로 분리된 DB에서만 실행
 ```
 
 ### 4. 개발 서버 실행
@@ -55,12 +61,13 @@ npm run dev
 src/
 ├── app/
 │   ├── layout.tsx          # 루트 레이아웃 (헤더 + 하단 탭바)
-│   ├── page.tsx            # / → /products 리다이렉트
+│   ├── page.tsx            # 메인 (관리자 메인 소개 설정 반영)
 │   ├── products/           # 상품 목록 (탭 1)
 │   ├── cart/               # 장바구니 (탭 2)
 │   ├── orders/             # 주문 조회 (탭 3)
-│   ├── profile/            # 프로필수정 (탭 4)
-│   ├── admin/              # 관리자 페이지 (role: ADMIN)
+│   ├── profile/            # 내 정보·배송지·회원 탈퇴 (탭 4)
+│   ├── about/ faq/ support/ policies/ privacy/  # 안내·정책 (관리자 설정 반영)
+│   ├── admin/              # 관리자: 주문(입금확인·배송·취소·환불), 상품, 회원(탈퇴 처리), 설정, 로그
 │   └── login/              # 소셜 로그인
 ├── components/
 │   ├── OrangeTopHeader.tsx    # 상단 헤더 (sticky + blur)
@@ -109,8 +116,13 @@ prisma/
 
 ```
 DRAFT → DEPOSIT_REQUESTED → PAYMENT_CONFIRMED → SHIPPING → DELIVERED
-                                                          ↘ CANCELED
+  │            │                    │               │           │
+  └ 고객 취소   └──── 관리자 취소(사유 기록) ──────────┴───────────┘ → CANCELED
 ```
+
+- 결제는 무통장입금만 사용하며, 관리자가 실제 계좌 입금을 확인해 입금완료 처리합니다 (PG·SMS 인증 없음).
+- 입금 후 취소된 주문은 '환불 필요'로 표시되고, 관리자가 계좌에서 직접 송금한 뒤 환불 금액을 기록합니다 (자동 송금 없음).
+- 발송 전 취소는 재고를 되돌리고, 발송 후 취소는 상품 상태를 보고 재고 복구 여부를 선택합니다.
 
 ---
 
@@ -118,7 +130,7 @@ DRAFT → DEPOSIT_REQUESTED → PAYMENT_CONFIRMED → SHIPPING → DELIVERED
 
 - `role: ADMIN` 계정만 `/admin/*` 접근 가능
 - 헤더에 "관리자페이지" 버튼 노출 (일반 USER는 미노출)
-- Prisma Studio에서 직접 role 변경: `npm run db:studio`
+- `ADMIN_EMAILS`에 있는 계정은 로그인 시 관리자로 승격되며, 권한은 요청마다 DB 기준으로 다시 확인합니다.
 
 ---
 
@@ -206,4 +218,4 @@ AUTH_URL=https://your-domain.com
 
 ---
 
-**🍊 화이팅! 오늘의귤 파이팅입니다.**
+운영 인수인계와 남은 작업은 [CLAUDE_HANDOFF.md](CLAUDE_HANDOFF.md)를 참고하세요.

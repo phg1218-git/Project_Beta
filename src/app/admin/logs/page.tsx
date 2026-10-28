@@ -1,4 +1,4 @@
-import { auth } from '@/auth'
+import { adminAuth } from '@/lib/admin-auth'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 
@@ -9,6 +9,9 @@ const ACTION_LABELS: Record<string, string> = {
   ship: '배송시작',
   delivered: '배송완료',
   expire: '만료정리',
+  'admin-cancel': '관리자취소',
+  refund: '환불기록',
+  withdraw: '회원탈퇴',
 }
 
 interface LogEntry {
@@ -66,7 +69,7 @@ async function getLogs(params: URLSearchParams): Promise<{ logs: LogEntry[]; tot
 }
 
 export default async function AdminLogsPage({ searchParams }: PageProps) {
-  const session = await auth()
+  const session = await adminAuth()
   if (!session?.user || session.user.role !== 'ADMIN') redirect('/')
 
   const params = await searchParams
@@ -107,6 +110,9 @@ export default async function AdminLogsPage({ searchParams }: PageProps) {
           <option value="ship">배송시작</option>
           <option value="delivered">배송완료</option>
           <option value="expire">만료정리</option>
+          <option value="admin-cancel">관리자취소</option>
+          <option value="refund">환불기록</option>
+          <option value="withdraw">회원탈퇴</option>
         </select>
         <input
           type="text"

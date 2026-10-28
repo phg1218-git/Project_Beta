@@ -25,6 +25,10 @@
 
   /* ── 하단 탭바 ── */
   --bottom-nav-height: 64px;
+
+  /* ── 앱 컬럼 (고객 화면 공통 폭) ── */
+  --app-max: 480px;
+  --outside: #F1E9DD;   /* PC에서 컬럼 바깥 배경 */
 }
 
 * {
@@ -40,12 +44,36 @@ html {
 
 body {
   font-family: 'Pretendard', 'Apple SD Gothic Neo', -apple-system, BlinkMacSystemFont, sans-serif;
-  background: var(--bg);
+  background: var(--outside);
   color: var(--text-primary);
   min-height: 100vh;
-  /* 하단 탭바(64px) + iPhone safe-area + 여유 8px */
-  padding-bottom: calc(var(--bottom-nav-height) + env(safe-area-inset-bottom, 0px) + 8px);
   overflow-x: hidden;
+}
+
+/* ── 앱 컬럼: 헤더·본문·하단탭이 모두 같은 폭 ── */
+.app-shell {
+  position: relative;
+  max-width: var(--app-max);
+  margin: 0 auto;
+  min-height: 100vh;
+  min-height: 100dvh; /* 모바일 주소창을 뺀 실제 화면 높이 — 내용이 짧으면 스크롤 없음 */
+  background: var(--bg);
+  /* 하단 탭바(64px) + iPhone safe-area 만큼만 비움 (페이지에서 pb-24 등을 추가하지 말 것) */
+  padding-bottom: calc(var(--bottom-nav-height) + env(safe-area-inset-bottom, 0px));
+  box-shadow: 0 0 32px rgba(0, 0, 0, 0.06);
+}
+.app-shell[data-wide] {
+  --app-max: none;
+  box-shadow: none;
+}
+
+/* 화면에 고정되는 바(하단탭·결제바 등)도 컬럼 폭에 맞춤 */
+.app-fixed-x {
+  left: 0;
+  right: 0;
+  margin-left: auto;
+  margin-right: auto;
+  max-width: var(--app-max);
 }
 
 /* ── 불필요한 스크롤 방지 ── */

@@ -1,10 +1,11 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { formatPrice } from '@/lib/utils'
+import { PageHeader } from '@/components/PageHeader'
 
 interface CartItem {
   id: string
@@ -13,6 +14,7 @@ interface CartItem {
   price: number
   quantity: number
   stock: number
+  isActive: boolean
   imageUrl?: string | null
 }
 
@@ -39,6 +41,11 @@ export default function CartPage() {
   const [fetchError, setFetchError] = useState<string | null>(null)
   const [selectedIds, setSelectedIds] = useState<string[]>([])
   const [isOrdering, setIsOrdering] = useState(false)
+  const orderInFlight = useRef(false)
+  const orderAttempt = useRef<{ payload: string; key: string } | null>(null)
+  const [depositorName, setDepositorName] = useState('')
+  const [shippingFee, setShippingFee] = useState<number | null>(null)
+  const [shippingError, setShippingError] = useState('')
   const [toast, setToast] = useState<ToastState>({ type: 'idle' })
 
   const [addresses, setAddresses] = useState<ShippingAddress[]>([])
@@ -56,8 +63,22 @@ export default function CartPage() {
   useEffect(() => {
     fetchCart()
     fetchAddresses()
+    fetchShippingFee()
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
+
+  const fetchShippingFee = async () => {
+    setShippingFee(null)
+    setShippingError('')
+    try {
+      const res = await fetch('/api/store-settings', { cache: 'no-store' })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error)
+      setShippingFee(data.shippingFee)
+    } catch {
+      setShippingError('배송비를 불러오지 못했습니다.')
+    }
+  }
 
   const fetchCart = async () => {
     try {
@@ -68,7 +89,7 @@ export default function CartPage() {
       }
       const data = await res.json()
       setItems(data)
-      setSelectedIds(data.map((item: CartItem) => item.id))
+      setSelectedIds(data.filter((item: CartItem) => item.isActive && item.stock > 0).map((item: CartItem) => item.id))
     } catch {
       setFetchError('네트워크 오류로 장바구니를 불러오지 못했습니다.')
     } finally {
@@ -188,15 +209,19 @@ export default function CartPage() {
     setSelectedIds((prev) => (prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id]))
   }
 
+  const availableItems = items.filter((item) => item.isActive && item.stock > 0)
   const toggleSelectAll = () => {
-    setSelectedIds(selectedIds.length === items.length ? [] : items.map((i) => i.id))
+    setSelectedIds(selectedIds.length === availableItems.length ? [] : availableItems.map((i) => i.id))
   }
 
   const selectedItems = items.filter((item) => selectedIds.includes(item.id))
   const total = selectedItems.reduce((sum, item) => sum + item.price * item.quantity, 0)
+  const payableTotal = total + (selectedItems.length ? shippingFee ?? 0 : 0)
   const selectedAddress = addresses.find((a) => a.id === selectedAddressId)
 
   const handleOrder = async () => {
+    if (orderInFlight.current) return
+    if (shippingFee === null) return
     if (selectedIds.length === 0) {
       showToast('error', '주문할 상품을 선택해주세요.')
       return
@@ -204,10 +229,15 @@ export default function CartPage() {
 
     if (!session?.user?.profileComplete) {
       showToast('error', '배송 정보를 먼저 등록해주세요. 프로필로 이동합니다.')
-      setTimeout(() => router.push('/profile/setup'), 1500)
+      setTimeout(() => router.push('/profile/setup?callbackUrl=%2Fcart'), 1500)
       return
     }
 
+    if (selectedItems.some((item) => !item.isActive || item.stock < item.quantity)) {
+      showToast('error', '품절 또는 재고가 부족한 상품의 수량을 확인해주세요.')
+      return
+    }
+    orderInFlight.current = true
     setIsOrdering(true)
     try {
       const orderItems = selectedItems.map((item) => ({
@@ -219,29 +249,50 @@ export default function CartPage() {
         items: orderItems,
         fromCart: true,
         cartItemIds: selectedIds,
+        depositorName: depositorName.trim() || session.user.name || undefined,
+        expectedShippingFee: shippingFee,
       }
       if (selectedAddressId) {
         body.shippingAddressId = selectedAddressId
       }
 
+      const payload = JSON.stringify({ ...body,
+        items: [...orderItems].sort((a, b) => a.productId.localeCompare(b.productId)),
+        cartItemIds: [...selectedIds].sort(),
+      })
+      const storageKey = `order-attempt:${session.user.id}`
+      try {
+        const saved = JSON.parse(sessionStorage.getItem(storageKey) || 'null')
+        if (saved?.payload === payload && typeof saved.key === 'string') orderAttempt.current = saved
+      } catch { /* 저장소를 사용할 수 없어도 현재 화면 내 재시도는 보호한다. */ }
+      if (orderAttempt.current?.payload !== payload) {
+        orderAttempt.current = { payload, key: crypto.randomUUID() }
+      }
+      try { sessionStorage.setItem(storageKey, JSON.stringify(orderAttempt.current)) } catch {}
+
       const res = await fetch('/api/orders', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
+        headers: { 'Content-Type': 'application/json', 'Idempotency-Key': orderAttempt.current.key },
+        body: payload,
       })
 
       const data = await res.json()
 
       if (!res.ok) {
+        if (data.code === 'SHIPPING_FEE_CHANGED') await fetchShippingFee()
         console.error('[주문 생성 실패]', { status: res.status, code: data.code, payload: data })
         showToast('error', data.error || '주문 생성에 실패했습니다.')
         return
       }
 
+      orderAttempt.current = null
+      try { sessionStorage.removeItem(storageKey) } catch {}
+      window.dispatchEvent(new Event('cart-updated'))
       router.push(`/orders/${data.id}`)
     } catch {
       showToast('error', '주문 생성 중 오류가 발생했습니다. 다시 시도해주세요.')
     } finally {
+      orderInFlight.current = false
       setIsOrdering(false)
     }
   }
@@ -286,7 +337,7 @@ export default function CartPage() {
   }
 
   return (
-    <div className="page-enter pb-36">
+    <div className="page-enter pb-20">
       {/* 토스트 알림 */}
       {toast.type !== 'idle' && (
         <div
@@ -330,17 +381,14 @@ export default function CartPage() {
       )}
 
       {/* 페이지 헤더 */}
-      <div className="px-4 py-4 bg-white border-b border-gray-200">
-        <h1 className="text-xl font-bold">장바구니</h1>
-        <p className="text-sm text-gray-500 mt-1">{items.length}개 상품</p>
-      </div>
+      <PageHeader title="장바구니" description={`${items.length}개 상품`} />
 
       {/* 선택/삭제 액션바 */}
       <div className="px-4 py-3 bg-gray-50 border-b border-gray-200 flex items-center justify-between">
         <label className="flex items-center gap-2 cursor-pointer">
           <input
             type="checkbox"
-            checked={selectedIds.length === items.length && items.length > 0}
+            checked={selectedIds.length === availableItems.length && availableItems.length > 0}
             onChange={toggleSelectAll}
             className="w-4 h-4 rounded accent-orange-500"
           />
@@ -379,6 +427,8 @@ export default function CartPage() {
           >
             <input
               type="checkbox"
+              disabled={!item.isActive || item.stock === 0}
+              aria-label={`${item.productName} 선택`}
               checked={selectedIds.includes(item.id)}
               onChange={() => toggleSelect(item.id)}
               className="w-4 h-4 rounded mt-1 accent-orange-500"
@@ -389,6 +439,7 @@ export default function CartPage() {
             <div className="flex-1">
               <div className="flex items-start justify-between">
                 <p className="font-semibold text-gray-900">{item.productName}</p>
+                {(!item.isActive || item.stock === 0) && <p className="text-sm text-red-600">{item.isActive ? '품절' : '판매 종료'}</p>}
                 <button
                   onClick={() => deleteItem(item.id)}
                   className="text-gray-400 hover:text-red-500 text-lg"
@@ -457,18 +508,34 @@ export default function CartPage() {
         </div>
       )}
 
+      <div className="px-4 mb-4">
+        <label htmlFor="depositorName" className="block text-sm font-semibold mb-2">입금자명</label>
+        <input id="depositorName" maxLength={50} value={depositorName}
+          onChange={(event) => setDepositorName(event.target.value)}
+          placeholder={session?.user?.name || '입금할 때 사용할 이름'}
+          className="w-full border border-gray-300 rounded-lg p-3" />
+        <p className="text-xs text-gray-500 mt-1">비워두면 회원 이름으로 접수합니다. 실제 계좌 입금자 이름과 같게 입력해주세요.</p>
+      </div>
+
+      <div className="px-4 mb-4 text-sm space-y-2">
+        <p>상품 금액: {formatPrice(total)}</p>
+        <p>배송비: {shippingFee === null ? '확인 중' : shippingFee === 0 ? '무료' : formatPrice(shippingFee)}</p>
+        {shippingError && <p role="alert">{shippingError} <button onClick={fetchShippingFee} className="underline">다시 확인</button></p>}
+        <Link href="/support" className="inline-block underline text-gray-600">배송·교환·고객 안내</Link>
+      </div>
+
       {/* 하단 결제바 */}
-      <div className="fixed bottom-[calc(64px+env(safe-area-inset-bottom))] left-0 right-0 bg-white border-t border-gray-200 px-4 py-3 z-[150] shadow-lg">
+      <div className="fixed bottom-[calc(64px+env(safe-area-inset-bottom))] app-fixed-x bg-white border-t border-gray-200 px-4 py-3 z-[150] shadow-lg">
         <div className="flex items-center justify-between">
           <div>
             <p className="text-xs text-gray-500">선택 {selectedIds.length}개 상품</p>
-            <p className="text-xl font-bold">{formatPrice(total)}</p>
+            <p className="text-xl font-bold">{shippingFee === null ? '금액 확인 중' : formatPrice(payableTotal)}</p>
           </div>
           <button
             onClick={handleOrder}
-            disabled={isOrdering || selectedIds.length === 0}
+            disabled={isOrdering || selectedIds.length === 0 || shippingFee === null}
             className={`px-6 py-3 font-bold rounded-xl transition-all ${
-              isOrdering || selectedIds.length === 0
+              isOrdering || selectedIds.length === 0 || shippingFee === null
                 ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
                 : 'bg-orange-500 text-white hover:bg-orange-600 active:scale-95'
             }`}
@@ -489,7 +556,7 @@ export default function CartPage() {
       {showAddressModal && (
         <div className="fixed inset-0 z-[200] flex items-end justify-center">
           <div className="absolute inset-0 bg-black/50" onClick={() => setShowAddressModal(false)} />
-          <div className="relative bg-white rounded-t-2xl w-full max-w-lg p-5 pb-8">
+          <div className="relative bg-white rounded-t-2xl w-full max-w-[var(--app-max)] p-5 pb-8">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-base font-bold text-gray-900">배송지 선택</h3>
               <button

@@ -4,6 +4,7 @@ import { signIn, useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
 import { useEffect, Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'
+import { safeReturnPath } from '@/lib/redirect'
 
 // Auth.js v5 에러 코드 → 한국어 메시지
 // NoEmail / ServerError 는 auth.ts signIn 콜백에서 직접 리다이렉트하는 커스텀 코드
@@ -42,26 +43,28 @@ function ErrorBanner() {
   )
 }
 
-export default function LoginPage() {
+function LoginContent() {
+  const searchParams = useSearchParams()
+  const callbackUrl = safeReturnPath(searchParams.get('callbackUrl'))
   const { status } = useSession()
   const router = useRouter()
 
   useEffect(() => {
     if (status === 'authenticated') {
-      router.replace('/products')
+      router.replace(callbackUrl)
     }
-  }, [status, router])
+  }, [status, router, callbackUrl])
 
   const handleGoogleLogin = () => {
-    signIn('google', { callbackUrl: '/' })
+    signIn('google', { callbackUrl })
   }
 
   const handleNaverLogin = () => {
-    signIn('naver', { callbackUrl: '/' })
+    signIn('naver', { callbackUrl })
   }
 
   const handleKakaoLogin = () => {
-    signIn('kakao', { callbackUrl: '/' })
+    signIn('kakao', { callbackUrl })
   }
 
   if (status === 'loading' || status === 'authenticated') {
@@ -184,4 +187,8 @@ function KakaoIcon() {
       </text>
     </svg>
   )
+}
+
+export default function LoginPage() {
+  return <Suspense fallback={<p className="p-6 text-center">로그인 준비 중...</p>}><LoginContent /></Suspense>
 }

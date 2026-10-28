@@ -24,9 +24,9 @@ export interface CartItem {
 }
 
 export const ORDER_STATUS_LABEL: Record<OrderStatus, string> = {
-  DRAFT:             '입금요청 전',
+  DRAFT:             '입금 대기',
   DEPOSIT_REQUESTED: '입금확인 요청 중',
-  PAYMENT_CONFIRMED: '배송 준비 중',
+  PAYMENT_CONFIRMED: '입금 완료',
   SHIPPING:          '배송 중',
   DELIVERED:         '배송 완료',
   CANCELED:          '취소됨',

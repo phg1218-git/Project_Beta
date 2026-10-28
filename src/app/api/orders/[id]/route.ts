@@ -1,6 +1,8 @@
+import { Prisma } from '@prisma/client'
 import { auth } from '@/auth'
 import { prisma } from '@/lib/prisma'
 import { NextResponse } from 'next/server'
+import { cancelOrderWithRestock, CANCEL_REASON_USER } from '@/lib/cancel-order'
 
 interface RouteParams {
   params: Promise<{ id: string }>
@@ -36,6 +38,9 @@ export async function GET(req: Request, { params }: RouteParams) {
 
     return NextResponse.json(order)
   } catch (error) {
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2025') {
+      return NextResponse.json({ error: '주문 상태가 변경되었습니다. 새로고침 후 다시 확인해주세요.' }, { status: 409 })
+    }
     console.error('주문 조회 오류:', error)
     return NextResponse.json(
       { error: '주문 조회 중 오류가 발생했습니다.' },
@@ -76,31 +81,16 @@ export async function DELETE(req: Request, { params }: RouteParams) {
       )
     }
 
-    // 트랜잭션으로 주문 취소 + 재고 복구
-    await prisma.$transaction(async (tx) => {
-      // 재고 복구
-      for (const item of order.items) {
-        await tx.product.update({
-          where: { id: item.productId },
-          data: {
-            stock: { increment: item.quantity },
-          },
-        })
-      }
-
-      // 주문 상태 변경
-      await tx.order.update({
-        where: { id },
-        data: {
-          status: 'CANCELED',
-          canceledAt: new Date(),
-          cancelReason: '사용자 취소',
-        },
-      })
-    })
+    // 트랜잭션으로 주문 취소 + 재고 복구 (order → product 순서로 잠금)
+    await prisma.$transaction((tx) =>
+      cancelOrderWithRestock(tx, order, { reason: CANCEL_REASON_USER }),
+    )
 
     return NextResponse.json({ success: true })
   } catch (error) {
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2025') {
+      return NextResponse.json({ error: '주문 상태가 변경되었습니다. 새로고침 후 다시 확인해주세요.' }, { status: 409 })
+    }
     console.error('주문 취소 오류:', error)
     return NextResponse.json(
       { error: '주문 취소 중 오류가 발생했습니다.' },

@@ -1,4 +1,5 @@
-import { auth } from '@/auth'
+import { revenuePeriod } from '@/lib/revenue-period'
+import { adminAuth } from '@/lib/admin-auth'
 import { prisma } from '@/lib/prisma'
 import { redirect } from 'next/navigation'
 import { formatPrice } from '@/lib/utils'
@@ -7,10 +8,7 @@ export const dynamic = 'force-dynamic'
 
 async function getRevenueStats() {
   try {
-    const now = new Date()
-    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1)
-    const startOfLastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1)
-    const endOfLastMonth = new Date(now.getFullYear(), now.getMonth(), 0)
+    const { startOfMonth, startOfLastMonth, startOfNextMonth } = revenuePeriod()
 
     // 이번 달 수익
     const thisMonthRevenue = await prisma.order.aggregate({
@@ -18,7 +16,7 @@ async function getRevenueStats() {
       _count: true,
       where: {
         status: { in: ['PAYMENT_CONFIRMED', 'SHIPPING', 'DELIVERED'] },
-        paidAt: { gte: startOfMonth },
+        paidAt: { gte: startOfMonth, lt: startOfNextMonth },
       },
     })
 
@@ -28,7 +26,7 @@ async function getRevenueStats() {
       _count: true,
       where: {
         status: { in: ['PAYMENT_CONFIRMED', 'SHIPPING', 'DELIVERED'] },
-        paidAt: { gte: startOfLastMonth, lte: endOfLastMonth },
+        paidAt: { gte: startOfLastMonth, lt: startOfMonth },
       },
     })
 
@@ -68,18 +66,14 @@ async function getRevenueStats() {
       },
       recentOrders,
     }
-  } catch {
-    return {
-      thisMonth: { revenue: 0, count: 0 },
-      lastMonth: { revenue: 0, count: 0 },
-      total: { revenue: 0, count: 0 },
-      recentOrders: [],
-    }
+  } catch (error) {
+    console.error('[Revenue] 매출 조회 실패')
+    throw error
   }
 }
 
 export default async function AdminRevenuePage() {
-  const session = await auth()
+  const session = await adminAuth()
   if (!session?.user || session.user.role !== 'ADMIN') {
     redirect('/')
   }
@@ -132,6 +126,7 @@ export default async function AdminRevenuePage() {
                   <p className="text-sm text-gray-500">
                     {order.paidAt 
                       ? new Date(order.paidAt).toLocaleDateString('ko-KR', {
+                          timeZone: 'Asia/Seoul',
                           month: 'long',
                           day: 'numeric',
                           hour: '2-digit',

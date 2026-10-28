@@ -5,10 +5,11 @@ import Link from 'next/link'
 import { OrderStatusBadge } from '@/components/OrderStatusBadge'
 import { formatPrice } from '@/lib/utils'
 import { Prisma } from '@prisma/client'
+import { PageHeader } from '@/components/PageHeader'
 
 export const dynamic = 'force-dynamic'
 
-const BANK_ACCOUNT_INFO = process.env.BANK_ACCOUNT_INFO || '농협 000-0000-0000-00 (오늘의귤)'
+const BANK_ACCOUNT_INFO = process.env.BANK_ACCOUNT_INFO || '고객센터에 문의해주세요.'
 const PAGE_SIZE = 20
 
 interface PageProps {
@@ -54,9 +55,9 @@ async function getOrders(
 
 const STATUS_TABS = [
   { key: 'all', label: '전체' },
-  { key: 'DRAFT', label: '입금요청 전' },
+  { key: 'DRAFT', label: '입금 대기' },
   { key: 'DEPOSIT_REQUESTED', label: '입금확인 요청' },
-  { key: 'PAYMENT_CONFIRMED', label: '결제확인' },
+  { key: 'PAYMENT_CONFIRMED', label: '입금 완료' },
   { key: 'SHIPPING', label: '배송중' },
   { key: 'DELIVERED', label: '배송완료' },
   { key: 'CANCELED', label: '취소' },
@@ -99,12 +100,9 @@ export default async function OrdersPage({ searchParams }: PageProps) {
   }
 
   return (
-    <div className="page-enter pb-24">
+    <div className="page-enter">
       {/* 페이지 헤더 */}
-      <div className="px-4 py-4 bg-white border-b border-gray-200">
-        <h1 className="text-xl font-bold">📦 주문 내역</h1>
-        <p className="text-sm text-gray-500 mt-1">최근 주문을 확인하세요</p>
-      </div>
+      <PageHeader title="주문 내역" description="최근 주문을 확인하세요" />
 
       {/* 계좌 정보 안내 */}
       <div className="px-4 py-4 bg-gradient-to-r from-orange-50 to-yellow-50 border-b border-orange-200">
@@ -151,7 +149,7 @@ export default async function OrdersPage({ searchParams }: PageProps) {
           defaultValue={to}
           className="px-2 py-1.5 text-xs border border-gray-200 rounded-lg"
         />
-        <button type="submit" className="px-3 py-1.5 text-xs font-semibold text-white bg-orange-500 rounded-lg hover:bg-orange-600">
+        <button type="submit" className="px-3 py-1.5 text-xs font-semibold text-white bg-orange-500 rounded-xl hover:bg-orange-600">
           적용
         </button>
         {(from || to) && (

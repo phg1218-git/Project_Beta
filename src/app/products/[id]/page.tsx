@@ -56,11 +56,11 @@ export default async function ProductDetailPage({ params }: PageProps) {
   const isLowStock = product.stock > 0 && product.stock <= 5
 
   return (
-    <div className="pb-24 bg-gray-50">
-      <div className="bg-white md:max-w-5xl md:mx-auto md:shadow-sm">
-        <div className="md:flex md:items-start">
+    <div className="page-enter">
+      <div className="bg-white">
+        <div>
           {/* 이미지 영역 */}
-          <div className="relative w-full h-72 md:w-1/2 md:h-[420px] bg-gradient-to-br from-orange-100 to-yellow-100 flex items-center justify-center overflow-hidden shrink-0">
+          <div className="relative w-full h-72 bg-gradient-to-br from-orange-100 to-yellow-100 flex items-center justify-center overflow-hidden shrink-0">
             {product.imageUrl ? (
               <Image
                 src={product.imageUrl}
@@ -82,8 +82,8 @@ export default async function ProductDetailPage({ params }: PageProps) {
           </div>
 
           {/* 상품 정보 */}
-          <div className="p-4 md:p-6 md:w-1/2">
-            <h1 className="text-2xl md:text-3xl font-bold text-gray-900 mb-2">
+          <div className="p-4">
+            <h1 className="text-2xl font-bold text-gray-900 mb-2">
               {product.name}
             </h1>
 

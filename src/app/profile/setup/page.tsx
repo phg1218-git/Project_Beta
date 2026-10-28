@@ -1,10 +1,12 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, Suspense } from 'react'
 import { useSession } from 'next-auth/react'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
+import { safeReturnPath } from '@/lib/redirect'
 import { AddressSearch } from '@/components/AddressSearch'
-import { formatPhoneNumber, isValidPhoneNumber } from '@/lib/utils'
+import { isKoreanName, isProfilePhone } from '@/lib/profile-validation'
+import { ProfilePhoneInput } from '@/components/ProfilePhoneInput'
 
 interface FormData {
   name: string
@@ -20,7 +22,9 @@ interface FormErrors {
   general?: string
 }
 
-export default function ProfileSetupPage() {
+function ProfileSetupContent() {
+  const searchParams = useSearchParams()
+  const callbackUrl = safeReturnPath(searchParams.get('callbackUrl'))
   const { data: session, status, update } = useSession()
   const router = useRouter()
   
@@ -39,7 +43,7 @@ export default function ProfileSetupPage() {
     if (session?.user) {
       setFormData((prev) => ({
         ...prev,
-        name: session.user.name || '',
+        name: isKoreanName(session.user.name) ? session.user.name : '',
       }))
     }
   }, [session])
@@ -47,14 +51,14 @@ export default function ProfileSetupPage() {
   // 이미 프로필 완성된 사용자는 메인으로 리다이렉트
   useEffect(() => {
     if (status === 'authenticated' && session?.user?.profileComplete) {
-      router.replace('/products')
+      router.replace(callbackUrl)
     }
-  }, [status, session, router])
+  }, [status, session, router, callbackUrl])
 
   // 로딩 중
   if (status === 'loading') {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="min-h-[60vh] flex items-center justify-center">
         <div className="text-center">
           <div className="text-5xl mb-4 animate-bounce">🍊</div>
           <p className="text-gray-500">로딩 중...</p>
@@ -70,14 +74,9 @@ export default function ProfileSetupPage() {
   }
 
   // 전화번호 입력 핸들러 (숫자만 + 자동 포맷팅)
-  const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const formatted = formatPhoneNumber(e.target.value)
-    setFormData((prev) => ({ ...prev, phone: formatted }))
-    
-    // 에러 클리어
-    if (errors.phone) {
-      setErrors((prev) => ({ ...prev, phone: undefined }))
-    }
+  const handlePhoneChange = (phone: string) => {
+    setFormData(prev => ({ ...prev, phone }))
+    setErrors(prev => ({ ...prev, phone: undefined }))
   }
 
   // 일반 입력 핸들러
@@ -106,17 +105,17 @@ export default function ProfileSetupPage() {
   const validateForm = (): boolean => {
     const newErrors: FormErrors = {}
 
-    if (!formData.name.trim() || formData.name.trim().length < 2) {
-      newErrors.name = '이름은 2자 이상 입력해주세요.'
+    if (!isKoreanName(formData.name)) {
+      newErrors.name = '이름은 한글 완성형 글자만 1~30자로 입력해주세요.'
     }
 
     if (!formData.phone) {
       newErrors.phone = '전화번호를 입력해주세요.'
-    } else if (!isValidPhoneNumber(formData.phone)) {
+    } else if (!isProfilePhone(formData.phone)) {
       newErrors.phone = '올바른 휴대폰 번호를 입력해주세요. (010-0000-0000)'
     }
 
-    if (!formData.addressBase.trim()) {
+    if (formData.addressBase.trim() && formData.addressBase.trim().length < 5) {
       newErrors.addressBase = '주소를 검색해서 입력해주세요.'
     }
 
@@ -162,7 +161,7 @@ export default function ProfileSetupPage() {
       })
 
       // 성공 시 메인 페이지로 이동
-      router.replace('/products')
+      router.replace(callbackUrl)
     } catch (error) {
       console.error('프로필 저장 오류:', error)
       setErrors({ general: '네트워크 오류가 발생했습니다. 잠시 후 다시 시도해주세요.' })
@@ -172,23 +171,23 @@ export default function ProfileSetupPage() {
   }
 
   return (
-    <div className="min-h-screen pb-24">
+    <div className="page-enter">
       {/* 헤더 */}
       <div
-        className="px-5 pt-8 pb-6 text-white text-center"
+        className="px-4 pt-8 pb-6 text-white text-center"
         style={{
           background: 'linear-gradient(135deg, #FF8A00 0%, #FFC94A 100%)',
         }}
       >
         <div className="text-4xl mb-3">🍊</div>
-        <h1 className="text-xl font-bold mb-2">프로필을 먼저 입력해 주세요</h1>
+        <h1 className="text-xl font-bold mb-2">개인정보를 입력해 주세요</h1>
         <p className="text-sm text-white/80">
-          주문 및 배송을 위해 기본 정보가 필요합니다
+          첫 로그인 시 이름과 휴대폰 번호를 필수로 입력해주세요
         </p>
       </div>
 
       {/* 스텝 인디케이터 */}
-      <div className="px-5 py-4 bg-white border-b border-gray-100">
+      <div className="px-4 py-4 bg-white border-b border-gray-100">
         <div className="flex items-center justify-center gap-2">
           <div className="flex items-center gap-2">
             <span className="w-7 h-7 rounded-full bg-orange-500 text-white text-sm font-bold flex items-center justify-center">
@@ -207,7 +206,7 @@ export default function ProfileSetupPage() {
       </div>
 
       {/* 폼 */}
-      <form onSubmit={handleSubmit} className="px-5 py-6">
+      <form onSubmit={handleSubmit} className="px-4 py-6">
         {/* 일반 오류 메시지 */}
         {errors.general && (
           <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-xl">
@@ -226,7 +225,11 @@ export default function ProfileSetupPage() {
             name="name"
             value={formData.name}
             onChange={handleChange}
-            placeholder="홍길동"
+            placeholder="홍길동 (한글만)"
+            required
+            maxLength={30}
+            pattern="[가-힣]{1,30}"
+            autoComplete="name"
             className={`
               w-full px-4 py-3 rounded-xl border text-base
               transition-colors focus:outline-none focus:ring-2 focus:ring-orange-500/20
@@ -244,21 +247,7 @@ export default function ProfileSetupPage() {
           <label htmlFor="phone" className="block text-sm font-semibold text-gray-700 mb-2">
             휴대폰 번호 <span className="text-red-500">*</span>
           </label>
-          <input
-            type="tel"
-            id="phone"
-            name="phone"
-            value={formData.phone}
-            onChange={handlePhoneChange}
-            placeholder="010-0000-0000"
-            maxLength={13}
-            className={`
-              w-full px-4 py-3 rounded-xl border text-base
-              transition-colors focus:outline-none focus:ring-2 focus:ring-orange-500/20
-              ${errors.phone ? 'border-red-400 bg-red-50' : 'border-gray-200 bg-white'}
-            `}
-            disabled={isSubmitting}
-          />
+          <ProfilePhoneInput value={formData.phone} onChange={handlePhoneChange} disabled={isSubmitting} invalid={!!errors.phone} />
           {errors.phone && (
             <p className="mt-1.5 text-sm text-red-500">{errors.phone}</p>
           )}
@@ -267,7 +256,7 @@ export default function ProfileSetupPage() {
         {/* 주소 */}
         <div className="mb-5">
           <label htmlFor="addressBase" className="block text-sm font-semibold text-gray-700 mb-2">
-            주소 <span className="text-red-500">*</span>
+            주소 (선택, 주문 전에 등록)
           </label>
           <div className="flex gap-2">
             <input
@@ -345,4 +334,8 @@ export default function ProfileSetupPage() {
       </form>
     </div>
   )
+}
+
+export default function ProfileSetupPage() {
+  return <Suspense fallback={<p className="p-6 text-center">기본 정보 준비 중...</p>}><ProfileSetupContent /></Suspense>
 }

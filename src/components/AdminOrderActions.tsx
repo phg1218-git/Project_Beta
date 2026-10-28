@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { AdminCancelRefund } from '@/components/AdminCancelRefund'
 
 interface OrderItem {
   id: string
@@ -16,6 +17,9 @@ interface OrderItem {
 interface Order {
   id: string
   status: string
+  totalAmount: number
+  paidAt?: Date | string | null
+  refunded?: boolean
   items?: OrderItem[]
 }
 
@@ -65,10 +69,10 @@ export function AdminOrderActions({ order }: { order: Order }) {
   }
 
   const handleConfirmPayment = () => {
-    requestConfirm('입금을 확인하시겠습니까?', async () => {
+    requestConfirm(order.status === 'DRAFT' ? '사용자의 입금확인 요청이 없는 주문입니다. 계좌의 실제 입금자와 금액을 확인했으며, 입금완료로 처리하시겠습니까?' : '계좌의 실제 입금자와 금액을 확인했습니까? 입금완료로 처리합니다.', async () => {
       setActionState({ type: 'loading' })
       try {
-        const res = await fetch(`/api/admin/orders/${order.id}/confirm-payment`, { method: 'POST' })
+        const res = await fetch(`/api/admin/orders/${order.id}/confirm-payment`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ manual: order.status === 'DRAFT' }) })
         if (res.ok) {
           showSuccess('입금이 확인되었습니다.')
           router.refresh()
@@ -186,23 +190,29 @@ export function AdminOrderActions({ order }: { order: Order }) {
       {/* 액션 버튼 */}
       {actionState.type !== 'confirm' && (
         <div className="flex items-center gap-2">
-          {order.status === 'DEPOSIT_REQUESTED' && (
+          {['DRAFT', 'DEPOSIT_REQUESTED'].includes(order.status) && (
             <button
               onClick={handleConfirmPayment}
               disabled={isLoading}
               className="px-3 py-1.5 text-xs font-semibold text-white bg-blue-500 rounded-lg hover:bg-blue-600 disabled:opacity-50"
             >
-              {isLoading ? '처리 중...' : '입금확인'}
+              {isLoading ? '처리 중...' : order.status === 'DRAFT' ? '직접 입금완료 처리' : '입금완료 처리'}
             </button>
           )}
 
           {(order.status === 'PAYMENT_CONFIRMED' || order.status === 'SHIPPING') && (
             <button
-              onClick={() => setShowShippingModal(true)}
+              onClick={() => {
+                const first = order.items?.[0]
+                setCarrier(first?.carrier || 'CJ대한통운')
+                setTrackingNumber(first?.trackingNumber || '')
+                setItemStates(Object.fromEntries((order.items || []).map(item => [item.id, { carrier: item.carrier || 'CJ대한통운', trackingNumber: item.trackingNumber || '' }])))
+                setShowShippingModal(true)
+              }}
               disabled={isLoading}
               className="px-3 py-1.5 text-xs font-semibold text-white bg-orange-500 rounded-lg hover:bg-orange-600 disabled:opacity-50"
             >
-              배송처리
+              배송정보 입력·수정
             </button>
           )}
 
@@ -215,6 +225,8 @@ export function AdminOrderActions({ order }: { order: Order }) {
               {isLoading ? '처리 중...' : '배송완료'}
             </button>
           )}
+
+          <AdminCancelRefund order={order} />
         </div>
       )}
 

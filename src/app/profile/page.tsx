@@ -8,7 +8,7 @@ export default function ProfilePage() {
 
   if (status === 'loading') {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="min-h-[60vh] flex items-center justify-center">
         <div className="text-center">
           <div className="text-4xl mb-4">🍊</div>
           <p className="text-gray-500">로딩 중...</p>
@@ -19,7 +19,7 @@ export default function ProfilePage() {
 
   if (!session) {
     return (
-      <div className="min-h-screen flex items-center justify-center p-4">
+      <div className="min-h-[60vh] flex items-center justify-center p-4">
         <div className="text-center">
           <div className="text-4xl mb-4">🔒</div>
           <p className="text-gray-500 mb-4">로그인이 필요합니다</p>
@@ -35,10 +35,10 @@ export default function ProfilePage() {
   }
 
   return (
-    <div className="page-enter pb-24">
+    <div className="page-enter">
       {/* 프로필 헤더 */}
       <div
-        className="px-5 pt-6 pb-6 text-white"
+        className="px-4 pt-6 pb-6 text-white"
         style={{
           background: 'linear-gradient(135deg, #FF8A00 0%, #FFC94A 100%)',
         }}
@@ -86,9 +86,9 @@ export default function ProfilePage() {
       )}
 
       <MenuSection title="서비스">
-        <MenuItem icon="💬" label="고객센터" />
-        <MenuItem icon="📄" label="이용약관" />
-        <MenuItem icon="🔐" label="개인정보처리방침" />
+        <MenuItem icon="💬" label="배송·고객 안내" href="/support" />
+        <MenuItem icon="❓" label="자주 묻는 질문" href="/faq" />
+        <MenuItem icon="🔐" label="개인정보처리방침" href="/privacy" />
       </MenuSection>
 
       {/* 로그아웃 버튼 */}
@@ -99,6 +99,9 @@ export default function ProfilePage() {
         >
           로그아웃
         </button>
+        <Link href="/profile/withdraw" className="block mt-3 text-center text-xs text-gray-400 underline">
+          회원 탈퇴
+        </Link>
       </div>
 
       <p className="text-center text-xs text-gray-400 mt-6">

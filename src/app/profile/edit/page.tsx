@@ -4,7 +4,10 @@ import { useState, useEffect } from 'react'
 import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
 import { AddressSearch } from '@/components/AddressSearch'
-import { formatPhoneNumber, isValidPhoneNumber } from '@/lib/utils'
+import { formatPhoneNumber } from '@/lib/utils'
+import { isKoreanName, isProfilePhone } from '@/lib/profile-validation'
+import { ProfilePhoneInput } from '@/components/ProfilePhoneInput'
+import { PageHeader } from '@/components/PageHeader'
 
 interface FormData {
   name: string
@@ -65,7 +68,7 @@ export default function ProfileEditPage() {
   // 로딩 중
   if (status === 'loading' || isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="min-h-[60vh] flex items-center justify-center">
         <div className="text-center">
           <div className="text-5xl mb-4 animate-bounce">🍊</div>
           <p className="text-gray-500">로딩 중...</p>
@@ -81,14 +84,9 @@ export default function ProfileEditPage() {
   }
 
   // 전화번호 입력 핸들러 (숫자만 + 자동 포맷팅)
-  const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const formatted = formatPhoneNumber(e.target.value)
-    setFormData((prev) => ({ ...prev, phone: formatted }))
-
-    if (errors.phone) {
-      setErrors((prev) => ({ ...prev, phone: undefined }))
-    }
-    setSaveSuccess(false)
+  const handlePhoneChange = (phone: string) => {
+    setFormData(prev => ({ ...prev, phone }))
+    setErrors(prev => ({ ...prev, phone: undefined }))
   }
 
   // 일반 입력 핸들러
@@ -117,17 +115,17 @@ export default function ProfileEditPage() {
   const validateForm = (): boolean => {
     const newErrors: FormErrors = {}
 
-    if (!formData.name.trim() || formData.name.trim().length < 2) {
-      newErrors.name = '이름은 2자 이상 입력해주세요.'
+    if (!isKoreanName(formData.name)) {
+      newErrors.name = '이름은 한글 완성형 글자만 1~30자로 입력해주세요.'
     }
 
     if (!formData.phone) {
       newErrors.phone = '전화번호를 입력해주세요.'
-    } else if (!isValidPhoneNumber(formData.phone)) {
+    } else if (!isProfilePhone(formData.phone)) {
       newErrors.phone = '올바른 휴대폰 번호를 입력해주세요. (010-0000-0000)'
     }
 
-    if (!formData.addressBase.trim()) {
+    if (formData.addressBase.trim() && formData.addressBase.trim().length < 5) {
       newErrors.addressBase = '주소를 검색해서 입력해주세요.'
     }
 
@@ -186,22 +184,12 @@ export default function ProfileEditPage() {
   }
 
   return (
-    <div className="min-h-screen pb-24">
+    <div className="page-enter">
       {/* 헤더 */}
-      <div className="px-5 py-4 bg-white border-b border-gray-100">
-        <div className="flex items-center gap-3">
-          <button
-            onClick={() => router.back()}
-            className="w-10 h-10 flex items-center justify-center rounded-full hover:bg-gray-100 transition-colors"
-          >
-            <span className="text-xl">←</span>
-          </button>
-          <h1 className="text-lg font-bold">회원정보 수정</h1>
-        </div>
-      </div>
+      <PageHeader title="회원정보 수정" />
 
       {/* 프로필 이미지 섹션 */}
-      <div className="px-5 py-6 bg-white border-b border-gray-100 flex flex-col items-center">
+      <div className="px-4 py-6 bg-white border-b border-gray-100 flex flex-col items-center">
         <div className="w-20 h-20 rounded-full bg-orange-100 flex items-center justify-center mb-3">
           {session?.user?.image ? (
             // eslint-disable-next-line @next/next/no-img-element
@@ -218,7 +206,7 @@ export default function ProfileEditPage() {
       </div>
 
       {/* 폼 */}
-      <form onSubmit={handleSubmit} className="px-5 py-6">
+      <form onSubmit={handleSubmit} className="px-4 py-6">
         {/* 성공 메시지 */}
         {saveSuccess && (
           <div className="mb-4 p-4 bg-green-50 border border-green-200 rounded-xl">
@@ -246,7 +234,11 @@ export default function ProfileEditPage() {
             name="name"
             value={formData.name}
             onChange={handleChange}
-            placeholder="홍길동"
+            placeholder="홍길동 (한글만)"
+            required
+            maxLength={30}
+            pattern="[가-힣]{1,30}"
+            autoComplete="name"
             className={`
               w-full px-4 py-3 rounded-xl border text-base
               transition-colors focus:outline-none focus:ring-2 focus:ring-orange-500/20
@@ -264,21 +256,7 @@ export default function ProfileEditPage() {
           <label htmlFor="phone" className="block text-sm font-semibold text-gray-700 mb-2">
             휴대폰 번호 <span className="text-red-500">*</span>
           </label>
-          <input
-            type="tel"
-            id="phone"
-            name="phone"
-            value={formData.phone}
-            onChange={handlePhoneChange}
-            placeholder="010-0000-0000"
-            maxLength={13}
-            className={`
-              w-full px-4 py-3 rounded-xl border text-base
-              transition-colors focus:outline-none focus:ring-2 focus:ring-orange-500/20
-              ${errors.phone ? 'border-red-400 bg-red-50' : 'border-gray-200 bg-white'}
-            `}
-            disabled={isSubmitting}
-          />
+          <ProfilePhoneInput value={formData.phone} onChange={handlePhoneChange} disabled={isSubmitting} invalid={!!errors.phone} />
           {errors.phone && (
             <p className="mt-1.5 text-sm text-red-500">{errors.phone}</p>
           )}
@@ -287,7 +265,7 @@ export default function ProfileEditPage() {
         {/* 주소 */}
         <div className="mb-5">
           <label htmlFor="addressBase" className="block text-sm font-semibold text-gray-700 mb-2">
-            주소 <span className="text-red-500">*</span>
+            주소 (선택, 주문 전에 등록)
           </label>
           <div className="flex gap-2">
             <input
@@ -357,7 +335,7 @@ export default function ProfileEditPage() {
       </form>
 
       {/* 하단 링크 */}
-      <div className="px-5 pb-8">
+      <div className="px-4 pb-8">
         <button
           onClick={() => router.push('/profile/shipping')}
           className="w-full py-3 text-center text-sm text-gray-500 hover:text-orange-500 transition-colors"

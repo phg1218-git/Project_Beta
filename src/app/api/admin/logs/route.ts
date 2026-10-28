@@ -1,4 +1,4 @@
-import { auth } from '@/auth'
+import { adminAuth } from '@/lib/admin-auth'
 import { prisma } from '@/lib/prisma'
 import { NextResponse } from 'next/server'
 
@@ -30,7 +30,7 @@ function maskJsonFields(json: string | null): string | null {
 
 export async function GET(req: Request) {
   try {
-    const session = await auth()
+    const session = await adminAuth()
     if (!session?.user || session.user.role !== 'ADMIN') {
       return NextResponse.json({ error: '권한이 없습니다.' }, { status: 403 })
     }

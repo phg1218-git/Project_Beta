@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
 
@@ -20,6 +20,11 @@ export function AddToCartButton({ productId, productName, maxStock, isSoldOut }:
   const [isAdding, setIsAdding] = useState(false)
   const [toast, setToast] = useState<ToastState>({ type: 'idle' })
 
+  useEffect(() => {
+    const saved = Number(new URLSearchParams(window.location.search).get('quantity'))
+    if (Number.isInteger(saved) && saved > 0) setQuantity(Math.min(maxStock, saved))
+  }, [maxStock])
+
   const showToast = (type: 'success' | 'error', message: string) => {
     setToast({ type, message })
     setTimeout(() => setToast({ type: 'idle' }), 3500)
@@ -28,7 +33,8 @@ export function AddToCartButton({ productId, productName, maxStock, isSoldOut }:
   const handleAddToCart = async () => {
     if (status === 'loading') return
     if (!session?.user) {
-      router.push('/login')
+      const path = `/products/${productId}?quantity=${quantity}`
+      router.push(`/login?callbackUrl=${encodeURIComponent(path)}`)
       return
     }
     if (isSoldOut || quantity < 1) return
@@ -44,6 +50,7 @@ export function AddToCartButton({ productId, productName, maxStock, isSoldOut }:
       if (res.ok) {
         showToast('success', `${productName}이(가) 장바구니에 담겼습니다.`)
         setQuantity(1)
+        window.dispatchEvent(new Event('cart-updated'))
       } else {
         const data = await res.json()
         showToast('error', data.error || '장바구니 추가에 실패했습니다.')
@@ -124,7 +131,7 @@ export function AddToCartButton({ productId, productName, maxStock, isSoldOut }:
       <button
         onClick={handleAddToCart}
         disabled={isAdding}
-        className="w-full py-3 bg-orange-500 text-white font-bold rounded-lg hover:bg-orange-600 disabled:opacity-50 transition"
+        className="w-full py-3 bg-orange-500 text-white font-bold rounded-xl hover:bg-orange-600 disabled:opacity-50 transition"
         aria-label="장바구니에 추가"
       >
         {isAdding ? '추가 중...' : '장바구니에 추가'}

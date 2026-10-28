@@ -35,7 +35,7 @@ export function ProductCard({ product, index = 0 }: { product: Product; index?: 
             className="object-cover"
           />
         ) : (
-          <span className="text-4xl sm:text-5xl md:text-6xl">{emoji}</span>
+          <span className="text-4xl">{emoji}</span>
         )}
 
         {/* 품절 오버레이 */}

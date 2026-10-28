@@ -1,4 +1,5 @@
-import { auth } from '@/auth'
+import { Prisma } from '@prisma/client'
+import { adminAuth } from '@/lib/admin-auth'
 import { prisma } from '@/lib/prisma'
 import { NextResponse } from 'next/server'
 import { writeAuditLogTx } from '@/lib/audit-log'
@@ -9,7 +10,7 @@ interface RouteParams {
 
 export async function POST(_req: Request, { params }: RouteParams) {
   try {
-    const session = await auth()
+    const session = await adminAuth()
     const { id } = await params
 
     if (!session?.user || session.user.role !== 'ADMIN') {
@@ -54,7 +55,7 @@ export async function POST(_req: Request, { params }: RouteParams) {
       })
 
       await tx.order.update({
-        where: { id },
+        where: { id, status: 'SHIPPING' },
         data: { status: 'DELIVERED' },
       })
 
@@ -70,6 +71,9 @@ export async function POST(_req: Request, { params }: RouteParams) {
 
     return NextResponse.json({ success: true })
   } catch (error) {
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2025') {
+      return NextResponse.json({ error: '주문 상태가 변경되었습니다. 새로고침 후 다시 확인해주세요.' }, { status: 409 })
+    }
     console.error('배송완료 처리 오류:', error)
     return NextResponse.json({ error: '처리에 실패했습니다.' }, { status: 500 })
   }

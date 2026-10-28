@@ -1,6 +1,7 @@
 import { prisma } from '@/lib/prisma'
 import { ProductCard } from '@/components/ProductCard'
 import Link from 'next/link'
+import { PageHeader } from '@/components/PageHeader'
 
 export const dynamic = 'force-dynamic'
 export const revalidate = 0
@@ -56,12 +57,9 @@ export default async function ProductsPage({ searchParams }: PageProps) {
   }
 
   return (
-    <div className="min-h-screen pb-24">
+    <div className="page-enter">
       {/* 페이지 헤더 */}
-      <div className="px-4 py-4 bg-white border-b border-gray-200">
-        <h1 className="text-xl font-bold">🍊 전체 상품</h1>
-        <p className="text-sm text-gray-500 mt-1">오늘 수확한 신선한 귤을 만나보세요</p>
-      </div>
+      <PageHeader title="전체 상품" description="제주 조천읍 농장에서 직접 보내드려요" />
 
       {/* 검색 */}
       <form method="GET" action="/products" className="px-4 py-3 bg-white border-b border-gray-100">
@@ -75,7 +73,7 @@ export default async function ProductsPage({ searchParams }: PageProps) {
           />
           <button
             type="submit"
-            className="px-4 py-2 text-sm font-semibold text-white bg-orange-500 rounded-lg hover:bg-orange-600"
+            className="px-4 py-2 text-sm font-semibold text-white bg-orange-500 rounded-xl hover:bg-orange-600"
           >
             검색
           </button>
@@ -101,7 +99,7 @@ export default async function ProductsPage({ searchParams }: PageProps) {
         ) : (
           <>
             <p className="text-xs text-gray-400 mb-3">총 {total.toLocaleString()}개 상품</p>
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 md:gap-4">
+            <div className="grid grid-cols-2 gap-3">
               {products.map((product, index) => (
                 <ProductCard key={product.id} product={product} index={index} />
               ))}

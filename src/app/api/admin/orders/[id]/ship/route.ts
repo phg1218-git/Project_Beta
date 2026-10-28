@@ -1,4 +1,5 @@
-import { auth } from '@/auth'
+import { Prisma } from '@prisma/client'
+import { adminAuth } from '@/lib/admin-auth'
 import { prisma } from '@/lib/prisma'
 import { NextResponse } from 'next/server'
 import { writeAuditLogTx } from '@/lib/audit-log'
@@ -15,14 +16,15 @@ interface RouteParams {
 
 export async function POST(req: Request, { params }: RouteParams) {
   try {
-    const session = await auth()
+    const session = await adminAuth()
     const { id } = await params
 
     if (!session?.user || session.user.role !== 'ADMIN') {
       return NextResponse.json({ error: '권한이 없습니다.' }, { status: 403 })
     }
 
-    const body = await req.json()
+    const body = await req.json().catch(() => null)
+    if (!body || typeof body !== 'object') return NextResponse.json({ error: '배송 정보를 입력해주세요.' }, { status: 400 })
 
     const order = await prisma.order.findUnique({
       where: { id },
@@ -35,7 +37,7 @@ export async function POST(req: Request, { params }: RouteParams) {
 
     if (!['PAYMENT_CONFIRMED', 'SHIPPING'].includes(order.status)) {
       return NextResponse.json(
-        { error: '결제확인 또는 배송중 상태의 주문만 배송처리할 수 있습니다.' },
+        { error: '입금완료 또는 배송중 상태의 주문만 배송처리할 수 있습니다.' },
         { status: 400 }
       )
     }
@@ -50,7 +52,7 @@ export async function POST(req: Request, { params }: RouteParams) {
         return NextResponse.json({ error: '배송할 아이템이 없습니다.' }, { status: 400 })
       }
       for (const si of shipItems) {
-        if (!si.carrier || !si.trackingNumber) {
+        if (!si || !si.carrier || !si.trackingNumber) {
           return NextResponse.json(
             { error: '각 아이템에 택배사와 송장번호를 입력해주세요.' },
             { status: 400 }
@@ -67,6 +69,18 @@ export async function POST(req: Request, { params }: RouteParams) {
         carrier,
         trackingNumber,
       }))
+    }
+
+    const ids = new Set<string>()
+    for (const item of shipItems) {
+      if (!item || typeof item.orderItemId !== 'string' || !order.items.some(i => i.id === item.orderItemId) || ids.has(item.orderItemId) ||
+          typeof item.carrier !== 'string' || !item.carrier.trim() || item.carrier.length > 50 ||
+          typeof item.trackingNumber !== 'string' || !/^[A-Za-z0-9 -]{5,40}$/.test(item.trackingNumber.trim())) {
+        return NextResponse.json({ error: '배송 상품, 택배사 또는 송장번호를 확인해주세요.' }, { status: 400 })
+      }
+      ids.add(item.orderItemId)
+      item.carrier = item.carrier.trim()
+      item.trackingNumber = item.trackingNumber.replace(/[ -]/g, '')
     }
 
     await prisma.$transaction(async (tx) => {
@@ -87,7 +101,7 @@ export async function POST(req: Request, { params }: RouteParams) {
       }
 
       await tx.order.update({
-        where: { id },
+        where: { id, status: order.status, updatedAt: order.updatedAt },
         data: { status: 'SHIPPING' },
       })
 
@@ -103,6 +117,9 @@ export async function POST(req: Request, { params }: RouteParams) {
 
     return NextResponse.json({ success: true })
   } catch (error) {
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2025') {
+      return NextResponse.json({ error: '주문 상태가 변경되었습니다. 새로고침 후 다시 확인해주세요.' }, { status: 409 })
+    }
     console.error('배송처리 오류:', error)
     return NextResponse.json({ error: '처리에 실패했습니다.' }, { status: 500 })
   }

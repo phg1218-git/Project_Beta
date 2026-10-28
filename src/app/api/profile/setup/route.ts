@@ -1,7 +1,8 @@
+import { isKoreanName, isProfilePhone } from '@/lib/profile-validation'
 import { auth } from '@/auth'
 import { prisma } from '@/lib/prisma'
 import { NextResponse } from 'next/server'
-import { extractPhoneNumbers, isValidPhoneNumber } from '@/lib/utils'
+import { extractPhoneNumbers } from '@/lib/utils'
 
 interface ProfileSetupBody {
   name: string
@@ -22,25 +23,28 @@ export async function POST(req: Request) {
       )
     }
 
-    const body: ProfileSetupBody = await req.json()
-    const { name, phone, addressBase, addressDetail } = body
+    const body: ProfileSetupBody = await req.json().catch(() => null)
+    if (!body || typeof body !== 'object') return NextResponse.json({ error: '입력값을 확인해주세요.' }, { status: 400 })
+    const { name, phone, addressBase = '', addressDetail } = body
 
     // 서버 측 유효성 검사
     const errors: Record<string, string> = {}
 
-    if (!name || name.trim().length < 2) {
-      errors.name = '이름은 2자 이상 입력해주세요.'
+    if (!isKoreanName(name)) {
+      errors.name = '이름은 한글 완성형 글자만 1~30자로 입력해주세요.'
     }
 
     if (!phone) {
       errors.phone = '전화번호를 입력해주세요.'
-    } else if (!isValidPhoneNumber(phone)) {
+    } else if (!isProfilePhone(phone)) {
       errors.phone = '올바른 휴대폰 번호를 입력해주세요. (010-0000-0000)'
     }
 
-    if (!addressBase || addressBase.trim().length < 5) {
+    if (typeof addressBase !== 'string' || (addressBase.trim() !== '' && addressBase.trim().length < 5)) {
       errors.addressBase = '주소를 검색해서 입력해주세요.'
     }
+
+    if (addressDetail !== undefined && typeof addressDetail !== 'string') errors.addressBase = '주소를 확인해주세요.'
 
     if (Object.keys(errors).length > 0) {
       return NextResponse.json(
@@ -78,7 +82,7 @@ export async function POST(req: Request) {
       })
 
       // 3. 기본배송지가 없으면 새로 생성
-      if (!existingDefaultAddress) {
+      if (!existingDefaultAddress && trimmedAddressBase) {
         await tx.shippingAddress.create({
           data: {
             userId: session.user.id,

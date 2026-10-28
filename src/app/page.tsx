@@ -1,11 +1,14 @@
+import { getHomeContent } from '@/lib/site-content'
 import Link from 'next/link'
 import { auth } from '@/auth'
-
-const BANK_ACCOUNT_INFO = process.env.BANK_ACCOUNT_INFO || '농협 000-0000-0000-00 (오늘의귤)'
+import { contactText, getStoreSettingsForDisplay } from '@/lib/store-settings'
 
 // 메인 랜딩 페이지 - Hero Section + 브랜드 스토리 + 신뢰 요소
 export default async function HomePage() {
   const session = await auth()
+  const content = await getHomeContent()
+  const settings = await getStoreSettingsForDisplay()
+  const bankAccount = settings.bankAccount || process.env.BANK_ACCOUNT_INFO
 
   return (
     <div className="page-enter">
@@ -19,15 +22,13 @@ export default async function HomePage() {
       >
         <div className="float-emoji text-7xl mb-6">🍊</div>
         <h1
-          className="text-3xl md:text-4xl font-black text-white mb-4"
+          className="text-3xl font-black text-white mb-4 break-keep"
           style={{ fontFamily: "'Noto Serif KR', serif" }}
         >
-          제주 조천읍,<br />입도 1세대의 고집으로 키운<br />정직한 귤
+          <span className="whitespace-pre-line">{content.title}</span>
         </h1>
-        <p className="text-white/90 text-base md:text-lg mb-8 max-w-md">
-          화려한 포장과 매끄러운 겉면은 없습니다.<br />
-          농약을 줄이고 흙의 힘을 믿는 아버지의 고집스러운 농법은<br />
-          비록 투박한 껍질을 남겼지만, 그 속에 가장 건강한 생명력을 채웠습니다.
+        <p className="text-white/90 text-base mb-8 max-w-md break-keep">
+          <span className="whitespace-pre-line">{content.introduction}</span>
         </p>
         <Link
           href="/products"
@@ -40,24 +41,20 @@ export default async function HomePage() {
       {/* 신뢰 요소 */}
       <section className="py-10 px-6 bg-white">
         <div className="max-w-3xl mx-auto grid grid-cols-3 gap-4 text-center">
-          <TrustItem emoji="🍊" title="당도 보장" desc="엄선된 고당도 귤만" />
-          <TrustItem emoji="🚚" title="익일 배송" desc="오늘 수확, 내일 도착" />
-          <TrustItem emoji="🌱" title="저농약 재배" desc="필수 농약 외 무사용" />
+          <TrustItem emoji="🍊" title="가족 농장" desc="조천읍 직접 재배" />
+          <TrustItem emoji="📦" title="산지 직송" desc="농장에서 바로 발송" />
+          <TrustItem emoji="🏦" title="무통장입금" desc="입금 확인 후 발송" />
         </div>
       </section>
 
       {/* 브랜드 스토리 */}
       <section className="py-12 px-6" style={{ background: 'var(--bg)' }}>
         <div className="max-w-2xl mx-auto text-center">
-          <h2 className="text-xl md:text-2xl font-bold mb-4">
-            제주 조천읍, 우리 농장 이야기
+          <h2 className="text-xl font-bold mb-4">
+            {content.storyTitle}
           </h2>
-          <p className="text-gray-600 leading-relaxed text-sm md:text-base">
-            조천읍 농장에서 바로 전하는, 꾸밈없는 제주의 맛입니다.
-            <br />
-            필수 농약 외에는 뿌리지 않는 아버지의 고집,
-            <br />
-            그 투박함 속에 가장 건강한 귤이 자랍니다.
+          <p className="text-gray-600 leading-relaxed text-sm">
+            <span className="whitespace-pre-line">{content.story}</span>
           </p>
         </div>
       </section>
@@ -65,23 +62,23 @@ export default async function HomePage() {
       {/* 귤 보관 & 관리법 */}
       <section className="py-12 px-6 bg-white">
         <div className="max-w-2xl mx-auto">
-          <h2 className="text-xl md:text-2xl font-bold mb-2 text-center text-gray-900">
+          <h2 className="text-xl font-bold mb-2 text-center text-gray-900">
             귤, 이렇게 보관하세요
           </h2>
           <p className="text-center text-sm text-gray-500 mb-8">
             산지 직송 귤의 신선함을 오래 유지하는 방법
           </p>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 gap-4">
             {[
               {
                 emoji: '🌡️',
                 title: '서늘한 곳 상온 보관',
-                desc: '귤은 냉장 보관보다 서늘하고 통풍이 잘 되는 상온(10~15°C)이 적합합니다. 베란다나 현관 근처가 이상적입니다. 상온에서 약 2~3주 신선하게 드실 수 있습니다.',
+                desc: '귤은 냉장 보관보다 서늘하고 통풍이 잘 되는 상온(10~15°C)이 적합합니다. 베란다나 현관 근처가 좋습니다. 보관 기간은 귤 상태와 온도·습도에 따라 달라집니다.',
               },
               {
                 emoji: '❄️',
                 title: '냉장 보관 시 신문지로 감싸기',
-                desc: '냉장 보관이 필요하다면 귤 하나하나를 신문지나 키친타월로 감싼 뒤 채소칸에 넣어주세요. 수분 손실과 냉해를 막아 4~6주까지 유지됩니다.',
+                desc: '냉장 보관이 필요하다면 귤 하나하나를 신문지나 키친타월로 감싼 뒤 채소칸에 넣어주세요. 수분 손실과 냉해를 줄여 더 오래 두고 드실 수 있습니다.',
               },
               {
                 emoji: '📦',
@@ -109,7 +106,7 @@ export default async function HomePage() {
       {/* 제주 귤의 제철 */}
       <section className="py-12 px-6" style={{ background: 'var(--bg)' }}>
         <div className="max-w-2xl mx-auto">
-          <h2 className="text-xl md:text-2xl font-bold mb-2 text-center text-gray-900">
+          <h2 className="text-xl font-bold mb-2 text-center text-gray-900">
             제주 귤의 제철과 종류
           </h2>
           <p className="text-center text-sm text-gray-500 mb-8">
@@ -153,7 +150,7 @@ export default async function HomePage() {
       {/* CTA Section */}
       <section className="py-10 px-6 bg-white text-center">
         <p className="text-gray-500 text-sm mb-4">
-          {session ? `${session.user?.name || '회원'}님, 환영합니다! 🍊` : '첫 주문 시 무료배송 혜택!'}
+          {session ? `${session.user?.name || '회원'}님, 환영합니다! 🍊` : settings.shippingFee === 0 ? '현재 배송비 무료' : `배송비 ${settings.shippingFee.toLocaleString()}원`}
         </p>
         <Link
           href="/products"
@@ -170,11 +167,13 @@ export default async function HomePage() {
           <span>·</span>
           <Link href="/faq" className="hover:text-orange-400 transition-colors">자주 묻는 질문</Link>
           <span>·</span>
+          <Link href="/support" className="hover:text-orange-400 transition-colors">배송·고객 안내</Link>
+          <span>·</span>
           <Link href="/privacy" className="hover:text-orange-400 transition-colors">개인정보처리방침</Link>
         </nav>
-        <p className="mb-2">오늘의귤 | 제주특별자치도 제주시 조천읍</p>
-        <p className="mb-2">고객센터: 010-0000-0000 (평일 09:00~18:00)</p>
-        <p>입금 계좌: {BANK_ACCOUNT_INFO}</p>
+        <p className="mb-2">{settings.farmName}{settings.region && ` | ${settings.region}`}</p>
+        <p className="mb-2">고객센터: {contactText(settings)}</p>
+        {bankAccount && <p>입금 계좌: {bankAccount}</p>}
         <p className="mt-4 text-gray-600">© 2025 오늘의귤. All rights reserved.</p>
       </footer>
     </div>

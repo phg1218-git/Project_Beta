@@ -3,6 +3,7 @@ import Google from 'next-auth/providers/google'
 import Naver from 'next-auth/providers/naver'
 import Kakao from 'next-auth/providers/kakao'
 import { prisma } from '@/lib/prisma'
+import { safeRedirect } from '@/lib/redirect'
 
 const ADMIN_EMAILS: string[] = process.env.ADMIN_EMAILS
   ? process.env.ADMIN_EMAILS.split(',').map((e) => e.trim()).filter(Boolean)
@@ -126,7 +127,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       }
     },
 
-    async jwt({ token, user, account, trigger, session }) {
+    async jwt({ token, user, account, trigger }) {
       // 최초 로그인 시 또는 토큰 생성 시
       if (account && user?.email) {
         const dbUser = await prisma.user.findUnique({
@@ -153,27 +154,23 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           token.addressBase = dbUser.addressBase
           token.addressDetail = dbUser.addressDetail
           token.profileComplete = dbUser.profileComplete
-          // DB에서 role 가져오되, ADMIN_EMAILS에 포함되면 ADMIN으로 강제 설정
-          token.role = ADMIN_EMAILS.includes(dbUser.email || '') ? 'ADMIN' : dbUser.role
+          // 권한은 DB 기준 (ADMIN_EMAILS는 로그인 시 승격에만 사용) — DB에서 회수하면 다음 갱신부터 반영
+          token.role = dbUser.role
         }
       }
 
-      // update() 호출 시 전달된 데이터로 갱신
-      if (trigger === 'update' && session) {
-        if (session.profileComplete !== undefined) {
-          token.profileComplete = session.profileComplete
-        }
-        if (session.phone !== undefined) {
-          token.phone = session.phone
-        }
-        if (session.addressBase !== undefined) {
-          token.addressBase = session.addressBase
-        }
-        if (session.addressDetail !== undefined) {
-          token.addressDetail = session.addressDetail
-        }
-        if (session.name !== undefined) {
-          token.name = session.name
+      // Session updates must use persisted data, never client-supplied completion flags.
+      if (trigger === 'update' && token.id) {
+        const profile = await prisma.user.findUnique({ where: { id: token.id as string } })
+        if (profile) {
+          token.name = profile.name
+          token.phone = profile.phone
+          token.addressBase = profile.addressBase
+          token.addressDetail = profile.addressDetail
+          token.profileComplete = profile.profileComplete
+          token.role = profile.role
+        } else {
+          token.profileComplete = false
         }
       }
 
@@ -182,6 +179,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
 
     async session({ session, token }) {
       if (token) {
+        session.user.name = token.name
         session.user.id = token.id as string
         session.user.role = token.role as 'USER' | 'ADMIN'
         session.user.profileComplete = token.profileComplete as boolean
@@ -193,9 +191,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     },
 
     async redirect({ url, baseUrl }) {
-      if (url.startsWith(baseUrl)) return url
-      if (url.startsWith('/')) return `${baseUrl}${url}`
-      return baseUrl
+      return safeRedirect(url, baseUrl)
     },
   },
   pages: {

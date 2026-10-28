@@ -2,12 +2,15 @@
 
 import Link from 'next/link'
 import { useSession, signOut } from 'next-auth/react'
-import { useState, useEffect } from 'react'
-import { usePathname } from 'next/navigation'
+import { useState, useEffect, useRef } from 'react'
+import { usePathname, useRouter } from 'next/navigation'
 
 export function OrangeTopHeader() {
   const { data: session, status } = useSession()
   const pathname = usePathname()
+  const router = useRouter()
+  // 사이트 안에서 이동한 횟수 — 링크로 바로 들어온 경우 뒤로가기가 사이트를 벗어나지 않도록
+  const visits = useRef(0)
   const [showMenu, setShowMenu] = useState(false)
   const [cartCount, setCartCount] = useState(0)
   const isLoggedIn = status === 'authenticated'
@@ -16,6 +19,8 @@ export function OrangeTopHeader() {
   useEffect(() => {
     if (isLoggedIn) {
       fetchCartCount()
+      window.addEventListener('cart-updated', fetchCartCount)
+      return () => window.removeEventListener('cart-updated', fetchCartCount)
     } else {
       setCartCount(0)
     }
@@ -33,12 +38,41 @@ export function OrangeTopHeader() {
     }
   }
 
+  useEffect(() => {
+    visits.current += 1
+  }, [pathname])
+
+  const goBack = () => {
+    if (visits.current > 1) {
+      router.back()
+      return
+    }
+    // 이전 화면이 없으면 한 단계 위 경로로 (예: /orders/abc → /orders)
+    const parent = pathname.replace(/\/[^/]+\/?$/, '') || '/'
+    router.push(parent === '/policies' ? '/support' : parent)
+  }
+
   // 로그인 페이지에서는 헤더 숨김
   if (pathname === '/login') return null
 
   return (
-    <header className="sticky top-0 z-[100] h-14 md:h-16 bg-white/90 backdrop-blur-xl border-b border-gray-100 shadow-sm">
-      <div className="h-full max-w-5xl mx-auto px-4 md:px-6 flex items-center justify-between">
+    <header className="sticky top-0 z-[100] h-14 bg-white/90 backdrop-blur-xl border-b border-gray-100 shadow-sm">
+      <div className="h-full px-4 flex items-center justify-between">
+        <div className="flex items-center gap-1 min-w-0">
+        {/* 뒤로가기 (홈 제외) */}
+        {pathname !== '/' && (
+          <button
+            type="button"
+            onClick={goBack}
+            aria-label="뒤로 가기"
+            className="-ml-2 w-10 h-10 flex items-center justify-center rounded-full text-gray-700 hover:bg-gray-100 transition-colors"
+          >
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <path d="M15 18l-6-6 6-6" />
+            </svg>
+          </button>
+        )}
+
         {/* 로고 */}
         <Link
           href="/"
@@ -46,10 +80,11 @@ export function OrangeTopHeader() {
           style={{ fontFamily: "'Noto Serif KR', serif" }}
         >
           <span className="text-2xl">🍊</span>
-          <span className="text-lg md:text-xl font-black text-orange-500 tracking-tight">
+          <span className="text-lg font-black text-orange-500 tracking-tight">
             오늘의귤
           </span>
         </Link>
+        </div>
 
         {/* 우측 액션 */}
         <div className="flex items-center gap-2">
@@ -72,7 +107,7 @@ export function OrangeTopHeader() {
               {isAdmin && (
                 <Link
                   href="/admin"
-                  className="hidden md:flex items-center justify-center px-3 py-1.5 bg-gray-900 text-white text-xs font-semibold rounded-lg hover:bg-gray-800 transition-colors"
+                  className="hidden items-center justify-center px-3 py-1.5 bg-gray-900 text-white text-xs font-semibold rounded-lg hover:bg-gray-800 transition-colors"
                 >
                   ⚙️ 관리자
                 </Link>
@@ -121,7 +156,7 @@ export function OrangeTopHeader() {
                       {isAdmin && (
                         <Link
                           href="/admin"
-                          className="flex items-center gap-2 px-4 py-2.5 text-sm hover:bg-gray-50 transition-colors md:hidden"
+                          className="flex items-center gap-2 px-4 py-2.5 text-sm hover:bg-gray-50 transition-colors"
                           onClick={() => setShowMenu(false)}
                         >
                           <span>⚙️</span> 관리자

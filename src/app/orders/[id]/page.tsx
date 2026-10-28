@@ -5,11 +5,13 @@ import { OrderStatusBadge } from '@/components/OrderStatusBadge'
 import { formatPrice, formatPhoneNumber } from '@/lib/utils'
 import { OrderActions } from '@/components/OrderActions'
 import { ShippingInfo } from '@/components/ShippingInfo'
+import { PageHeader } from '@/components/PageHeader'
+import { readRefund, refundLogWhere } from '@/lib/admin-cancel'
 
 export const dynamic = 'force-dynamic'
 
 // 환경변수에서 계좌 정보 가져오기
-const BANK_ACCOUNT_INFO = process.env.BANK_ACCOUNT_INFO || '농협 000-0000-0000-00 (오늘의귤)'
+const BANK_ACCOUNT_INFO = process.env.BANK_ACCOUNT_INFO || '고객센터에 문의해주세요.'
 
 interface PageProps {
   params: Promise<{ id: string }>
@@ -42,19 +44,21 @@ export default async function OrderDetailPage({ params }: PageProps) {
     notFound()
   }
 
+  // 입금 후 취소된 주문은 환불 기록 여부를 함께 안내 (금액만 표시, 관리자 메모는 숨김)
+  const refund = order.status === 'CANCELED' && order.paidAt
+    ? readRefund(await prisma.adminActionLog.findFirst({
+        where: refundLogWhere(order.id),
+        select: { adminId: true, afterJson: true, createdAt: true },
+      }).catch(() => null))
+    : null
   const canRequestDeposit = order.status === 'DRAFT'
   const canCancel = order.status === 'DRAFT'
   const canViewShipping = ['PAYMENT_CONFIRMED', 'SHIPPING', 'DELIVERED'].includes(order.status)
 
   return (
-    <div className="page-enter pb-24">
+    <div className="page-enter">
       {/* 페이지 헤더 */}
-      <div className="px-4 py-4 bg-white border-b border-gray-200">
-        <h1 className="text-xl font-bold">📦 주문 상세</h1>
-        <p className="text-sm text-gray-500 mt-1">
-          주문번호: {order.id.slice(-8).toUpperCase()}
-        </p>
-      </div>
+      <PageHeader title="주문 상세" description={`주문번호: ${order.id.slice(-8).toUpperCase()}`} />
 
       {/* 계좌 정보 안내 - DRAFT 상태일 때만 표시 */}
       {order.status === 'DRAFT' && (
@@ -64,7 +68,7 @@ export default async function OrderDetailPage({ params }: PageProps) {
               💳 입금 계좌
             </p>
             <p className="text-center text-sm font-bold text-gray-900">
-              {BANK_ACCOUNT_INFO}
+              {order.bankAccountSnapshot || BANK_ACCOUNT_INFO}
             </p>
           </div>
         </div>
@@ -136,6 +140,14 @@ export default async function OrderDetailPage({ params }: PageProps) {
               <p className="text-sm text-red-800">
                 ❌ 취소된 주문입니다.
               </p>
+              {order.cancelReason && <p className="mt-1 text-xs text-red-700">사유: {order.cancelReason}</p>}
+              {order.paidAt && (
+                <p className="mt-1 text-xs text-red-700">
+                  {refund
+                    ? `${formatPrice(refund.amount)} 환불 완료 (${new Date(refund.refundedAt).toLocaleDateString('ko-KR', { timeZone: 'Asia/Seoul' })})`
+                    : '입금하신 금액을 환불해드릴 예정입니다. 환불 계좌 확인이 필요하면 고객센터에서 연락드립니다.'}
+                </p>
+              )}
             </div>
           )}
         </div>
@@ -206,11 +218,11 @@ export default async function OrderDetailPage({ params }: PageProps) {
         <div className="bg-white rounded-2xl shadow-sm p-4">
           <div className="flex justify-between items-center mb-3">
             <span className="text-gray-600">상품 금액</span>
-            <span className="font-semibold">{formatPrice(order.totalAmount)}</span>
+            <span className="font-semibold">{formatPrice(order.totalAmount - order.shippingFee)}</span>
           </div>
           <div className="flex justify-between items-center mb-3">
             <span className="text-gray-600">배송비</span>
-            <span className="font-semibold text-green-600">무료</span>
+            <span className="font-semibold">{order.shippingFee === 0 ? '무료' : formatPrice(order.shippingFee)}</span>
           </div>
           <div className="border-t border-gray-100 pt-3 flex justify-between items-center">
             <span className="font-bold text-gray-900">총 결제금액</span>

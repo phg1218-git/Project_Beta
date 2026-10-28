@@ -5,6 +5,7 @@ import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
 import { AddressSearch } from '@/components/AddressSearch'
 import { formatPhoneNumber, isValidPhoneNumber, extractPhoneNumbers } from '@/lib/utils'
+import { PageHeader } from '@/components/PageHeader'
 
 interface ShippingAddress {
   id: string
@@ -78,7 +79,7 @@ export default function ShippingAddressPage() {
   // 로딩 중
   if (status === 'loading' || isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="min-h-[60vh] flex items-center justify-center">
         <div className="text-center">
           <div className="text-5xl mb-4 animate-bounce">🍊</div>
           <p className="text-gray-500">로딩 중...</p>
@@ -255,27 +256,19 @@ export default function ShippingAddressPage() {
   }
 
   return (
-    <div className="min-h-screen pb-24">
+    <div className="page-enter">
       {/* 헤더 */}
-      <div className="px-5 py-4 bg-white border-b border-gray-100">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <button
-              onClick={() => router.back()}
-              className="w-10 h-10 flex items-center justify-center rounded-full hover:bg-gray-100 transition-colors"
-            >
-              <span className="text-xl">←</span>
-            </button>
-            <h1 className="text-lg font-bold">배송지 관리</h1>
-          </div>
+      <PageHeader
+        title="배송지 관리"
+        action={
           <button
             onClick={openAddModal}
-            className="px-4 py-2 bg-orange-500 text-white text-sm font-semibold rounded-lg hover:bg-orange-600 transition-colors"
+            className="px-4 py-2 bg-orange-500 text-white text-sm font-semibold rounded-xl hover:bg-orange-600 transition-colors"
           >
             + 추가
           </button>
-        </div>
-      </div>
+        }
+      />
 
       {/* 배송지 목록 */}
       <div className="px-4 py-4">
@@ -358,7 +351,7 @@ export default function ShippingAddressPage() {
 
       {/* 모달 */}
       {showModal && (
-        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center">
+        <div className="fixed inset-0 z-50 flex items-end justify-center">
           {/* 오버레이 */}
           <div
             className="absolute inset-0 bg-black/50"
@@ -366,7 +359,7 @@ export default function ShippingAddressPage() {
           />
 
           {/* 모달 내용 */}
-          <div className="relative w-full sm:max-w-md bg-white rounded-t-3xl sm:rounded-2xl max-h-[90vh] overflow-y-auto">
+          <div className="relative w-full max-w-[var(--app-max)] bg-white rounded-t-3xl max-h-[90vh] overflow-y-auto">
             {/* 모달 헤더 */}
             <div className="sticky top-0 bg-white px-5 py-4 border-b border-gray-100 flex items-center justify-between">
               <h2 className="text-lg font-bold">

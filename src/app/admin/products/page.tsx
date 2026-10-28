@@ -1,4 +1,5 @@
-import { auth } from '@/auth'
+import Image from 'next/image'
+import { adminAuth } from '@/lib/admin-auth'
 import { prisma } from '@/lib/prisma'
 import { redirect } from 'next/navigation'
 import { formatPrice } from '@/lib/utils'
@@ -42,7 +43,7 @@ async function getProducts(q: string, isActive: string, lowStock: boolean, page:
 }
 
 export default async function AdminProductsPage({ searchParams }: PageProps) {
-  const session = await auth()
+  const session = await adminAuth()
   if (!session?.user || session.user.role !== 'ADMIN') {
     redirect('/')
   }
@@ -150,8 +151,8 @@ export default async function AdminProductsPage({ searchParams }: PageProps) {
                   <tr key={product.id} className="hover:bg-gray-50">
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-3">
-                        <div className="w-12 h-12 bg-gradient-to-br from-orange-100 to-yellow-100 rounded-lg flex items-center justify-center text-xl">
-                          🍊
+                        <div className="relative w-12 h-12 bg-gradient-to-br from-orange-100 to-yellow-100 rounded-lg overflow-hidden flex items-center justify-center text-xl">
+                          {product.imageUrl ? <Image src={product.imageUrl} alt={product.name} fill sizes="48px" className="object-cover" /> : '🍊'}
                         </div>
                         <div>
                           <p className="text-sm font-medium text-gray-900">{product.name}</p>

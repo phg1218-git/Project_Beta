@@ -3,7 +3,10 @@
 
 import Link from 'next/link'
 import { prisma } from '@/lib/prisma'
-import { AdminExpireButton } from '@/components/AdminExpireButton'
+import { AdminExpireReview } from '@/components/AdminExpireReview'
+import { adminAuth } from '@/lib/admin-auth'
+import { redirect } from 'next/navigation'
+import { revenuePeriod } from '@/lib/revenue-period'
 
 export const dynamic = 'force-dynamic'
 export const revalidate = 0
@@ -29,13 +32,12 @@ async function getDashboardStats() {
     ])
 
     // 이번 달 수익 계산
-    const now = new Date()
-    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1)
+    const { startOfMonth, startOfNextMonth } = revenuePeriod()
     const monthlyRevenue = await prisma.order.aggregate({
       _sum: { totalAmount: true },
       where: {
         status: { in: ['PAYMENT_CONFIRMED', 'SHIPPING', 'DELIVERED'] },
-        paidAt: { gte: startOfMonth },
+        paidAt: { gte: startOfMonth, lt: startOfNextMonth },
       },
     })
 
@@ -55,11 +57,12 @@ async function getDashboardStats() {
 }
 
 export default async function AdminDashboardPage() {
+  if (!await adminAuth()) redirect('/')
   const stats = await getDashboardStats()
 
   const statCards = [
     { label: '총 주문', value: stats.totalOrders, icon: '📦', color: 'bg-blue-500', href: '/admin/orders' },
-    { label: '입금 대기', value: stats.pendingOrders, icon: '⏳', color: 'bg-yellow-500', href: '/admin/orders' },
+    { label: '입금확인 요청', value: stats.pendingOrders, icon: '⏳', color: 'bg-yellow-500', href: '/admin/orders?status=DEPOSIT_REQUESTED' },
     { label: '등록 상품', value: stats.totalProducts, icon: '🍊', color: 'bg-orange-500', href: '/admin/products' },
     { label: '전체 회원', value: stats.totalMembers, icon: '👥', color: 'bg-green-500', href: '/admin/members' },
   ]
@@ -111,23 +114,17 @@ export default async function AdminDashboardPage() {
         </div>
       </div>
 
-      {/* 만료 주문 정리 */}
-      <div className="mb-8 p-4 bg-white rounded-xl shadow-sm flex items-center justify-between flex-wrap gap-3">
-        <div>
-          <p className="font-semibold text-gray-900">만료 주문 자동취소</p>
-          <p className="text-xs text-gray-500 mt-0.5">
-            입금기한이 지난 DRAFT/입금확인요청 주문을 취소하고 재고를 복구합니다.
-          </p>
-        </div>
-        <AdminExpireButton />
-      </div>
+      {/* 입금기한 경과 주문 검토 */}
+      <AdminExpireReview />
 
       {/* 빠른 액션 */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+        <QuickAction href="/admin/content" icon="✏️" label="메인 소개 설정" desc="소개 내용 수정" />
         <QuickAction href="/admin/orders" icon="📋" label="주문 관리" desc="입금확인 · 배송처리" />
         <QuickAction href="/admin/products" icon="🍊" label="상품 관리" desc="등록 · 수정 · 삭제" />
         <QuickAction href="/admin/revenue" icon="💰" label="수익 통계" desc="일별 · 주별 · 월별" />
         <QuickAction href="/admin/members" icon="👥" label="회원 관리" desc="회원 조회 · 관리" />
+        <QuickAction href="/admin/settings" icon="⚙️" label="농장·판매 설정" desc="연락처 · 계좌 · 배송 · 약관" />
         <QuickAction href="/admin/logs" icon="🗒️" label="액션 로그" desc="관리자 이력 조회" />
       </div>
 
@@ -191,9 +188,9 @@ function QuickAction({
 
 function StatusBadge({ status }: { status: string }) {
   const config: Record<string, { label: string; className: string }> = {
-    DRAFT: { label: '입금요청 전', className: 'bg-gray-100 text-gray-600' },
+    DRAFT: { label: '입금확인 요청', className: 'bg-gray-100 text-gray-600' },
     DEPOSIT_REQUESTED: { label: '입금확인 요청', className: 'bg-yellow-100 text-yellow-700' },
-    PAYMENT_CONFIRMED: { label: '배송 준비', className: 'bg-blue-100 text-blue-700' },
+    PAYMENT_CONFIRMED: { label: '입금 완료', className: 'bg-blue-100 text-blue-700' },
     SHIPPING: { label: '배송 중', className: 'bg-orange-100 text-orange-700' },
     DELIVERED: { label: '배송 완료', className: 'bg-green-100 text-green-700' },
     CANCELED: { label: '취소', className: 'bg-red-100 text-red-600' },

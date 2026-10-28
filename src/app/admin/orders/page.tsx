@@ -1,4 +1,4 @@
-import { auth } from '@/auth'
+import { adminAuth } from '@/lib/admin-auth'
 import { prisma } from '@/lib/prisma'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
@@ -6,6 +6,7 @@ import { formatPrice } from '@/lib/utils'
 import { OrderStatusBadge } from '@/components/OrderStatusBadge'
 import { AdminOrderActions } from '@/components/AdminOrderActions'
 import { Prisma } from '@prisma/client'
+import { readRefund } from '@/lib/admin-cancel'
 
 export const dynamic = 'force-dynamic'
 
@@ -19,13 +20,23 @@ async function getOrders(status: string, q: string, page: number) {
   try {
     const where: Prisma.OrderWhereInput = {}
 
-    if (status && status !== 'all') {
+    if (['DRAFT', 'DEPOSIT_REQUESTED', 'PAYMENT_CONFIRMED', 'SHIPPING', 'DELIVERED', 'CANCELED'].includes(status)) {
       where.status = status as Prisma.EnumOrderStatusFilter
+    } else if (status === 'REFUND_PENDING') {
+      // 입금 후 취소됐는데 환불 기록이 없는 주문
+      const refunded = await prisma.adminActionLog.findMany({
+        where: { action: 'refund', targetType: 'order' },
+        select: { targetId: true },
+      })
+      where.status = 'CANCELED'
+      where.paidAt = { not: null }
+      where.id = { notIn: refunded.map((r) => r.targetId) }
     }
 
     if (q) {
       where.OR = [
         { id: { contains: q, mode: 'insensitive' } },
+        { depositorName: { contains: q, mode: 'insensitive' } },
         { user: { name: { contains: q, mode: 'insensitive' } } },
         { user: { email: { contains: q, mode: 'insensitive' } } },
       ]
@@ -44,7 +55,15 @@ async function getOrders(status: string, q: string, page: number) {
       }),
       prisma.order.count({ where }),
     ])
-    return { orders, total }
+    const paidCanceledIds = orders.filter((o) => o.status === 'CANCELED' && o.paidAt).map((o) => o.id)
+    const refundLogs = paidCanceledIds.length
+      ? await prisma.adminActionLog.findMany({
+          where: { action: 'refund', targetType: 'order', targetId: { in: paidCanceledIds } },
+          select: { adminId: true, targetId: true, afterJson: true, createdAt: true },
+        })
+      : []
+    const refunds = new Map(refundLogs.map((log) => [log.targetId, readRefund(log)]))
+    return { orders, total, refunds }
   } catch (error) {
     console.error('[AdminOrders] 주문 목록 조회 실패:', error instanceof Error ? error.message : error)
     throw error
@@ -53,16 +72,17 @@ async function getOrders(status: string, q: string, page: number) {
 
 const STATUS_TABS = [
   { key: 'all', label: '전체' },
-  { key: 'DRAFT', label: '입금요청 전' },
+  { key: 'DRAFT', label: '입금 대기' },
   { key: 'DEPOSIT_REQUESTED', label: '입금확인 요청' },
-  { key: 'PAYMENT_CONFIRMED', label: '결제확인' },
+  { key: 'PAYMENT_CONFIRMED', label: '입금 완료' },
   { key: 'SHIPPING', label: '배송중' },
   { key: 'DELIVERED', label: '배송완료' },
   { key: 'CANCELED', label: '취소' },
+  { key: 'REFUND_PENDING', label: '환불 필요' },
 ]
 
 export default async function AdminOrdersPage({ searchParams }: PageProps) {
-  const session = await auth()
+  const session = await adminAuth()
   if (!session?.user || session.user.role !== 'ADMIN') {
     redirect('/')
   }
@@ -72,7 +92,7 @@ export default async function AdminOrdersPage({ searchParams }: PageProps) {
   const q = params.q?.trim() ?? ''
   const page = Math.max(1, parseInt(params.page ?? '1', 10) || 1)
 
-  const { orders, total } = await getOrders(currentStatus, q, page)
+  const { orders, total, refunds } = await getOrders(currentStatus, q, page)
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE))
 
   const buildHref = (overrides: Record<string, string>) => {
@@ -99,7 +119,7 @@ export default async function AdminOrdersPage({ searchParams }: PageProps) {
     <div className="p-4 md:p-8">
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-gray-900">📋 주문 관리</h1>
-        <p className="text-gray-500 mt-1">주문 현황을 확인하고 처리하세요</p>
+        <p className="text-gray-500 mt-1">입금확인 요청을 확인하고, 실제 계좌 입금 확인 후 입금완료 처리해주세요. 요청 전 주문도 직접 처리할 수 있습니다.</p>
       </div>
 
       {/* 상태 필터 탭 */}
@@ -181,6 +201,8 @@ export default async function AdminOrdersPage({ searchParams }: PageProps) {
                       <div>
                         <p className="text-sm font-medium text-gray-900">{order.user?.name || '-'}</p>
                         <p className="text-xs text-gray-500">{order.user?.email}</p>
+                        <p className="text-xs text-orange-700">입금자: {order.depositorName || order.user?.name || '미등록'}</p>
+                        {order.requestedDepositAt && <p className="text-xs text-gray-500">확인요청: {new Date(order.requestedDepositAt).toLocaleString('ko-KR', { timeZone: 'Asia/Seoul' })}</p>}
                       </div>
                     </td>
                     <td className="px-4 py-3">
@@ -196,6 +218,14 @@ export default async function AdminOrdersPage({ searchParams }: PageProps) {
                     </td>
                     <td className="px-4 py-3">
                       <OrderStatusBadge status={order.status} />
+                      {order.status === 'CANCELED' && order.paidAt && (
+                        refunds.get(order.id)
+                          ? <p className="mt-1 text-xs text-gray-500">환불 {formatPrice(refunds.get(order.id)!.amount)} 기록됨</p>
+                          : <p className="mt-1 text-xs font-semibold text-red-600">환불 필요</p>
+                      )}
+                      {order.status === 'CANCELED' && order.cancelReason && (
+                        <p className="mt-1 text-xs text-gray-400 max-w-[12rem] truncate" title={order.cancelReason}>{order.cancelReason}</p>
+                      )}
                     </td>
                     <td className="px-4 py-3">
                       <span className="text-sm text-gray-500">
@@ -203,7 +233,7 @@ export default async function AdminOrdersPage({ searchParams }: PageProps) {
                       </span>
                     </td>
                     <td className="px-4 py-3">
-                      <AdminOrderActions order={order} />
+                      <AdminOrderActions order={{ ...order, refunded: refunds.has(order.id) }} />
                     </td>
                   </tr>
                 ))}

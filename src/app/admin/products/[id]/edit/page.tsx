@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { ProductImageUpload } from '@/components/ProductImageUpload'
 import { useRouter, useParams } from 'next/navigation'
 import { useSession } from 'next-auth/react'
 
@@ -33,8 +34,11 @@ export default function AdminProductEditPage() {
     imageUrl: '',
   })
   const [errors, setErrors] = useState<FormErrors>({})
+  // 수정 화면을 연 시점의 재고 — 서버가 그 사이 주문으로 바뀐 재고를 덮어쓰지 않도록 함께 보냄
+  const [loadedStock, setLoadedStock] = useState<number | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [imageBusy, setImageBusy] = useState(false)
 
   useEffect(() => {
     if (
@@ -58,6 +62,7 @@ export default function AdminProductEditPage() {
         return
       }
       const data = await res.json()
+      setLoadedStock(typeof data.stock === 'number' ? data.stock : null)
       setForm({
         name: data.name ?? '',
         description: data.description ?? '',
@@ -101,6 +106,7 @@ export default function AdminProductEditPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    if (imageBusy || isSubmitting) return
     if (!validate()) return
     setIsSubmitting(true)
     setErrors({})
@@ -113,6 +119,7 @@ export default function AdminProductEditPage() {
           description: form.description.trim(),
           price: Number(form.price),
           stock: Number(form.stock),
+          ...(loadedStock !== null && { expectedStock: loadedStock }),
           imageUrl: form.imageUrl.trim() || null,
         }),
       })
@@ -131,7 +138,7 @@ export default function AdminProductEditPage() {
 
   if (status === 'loading' || isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="min-h-[60vh] flex items-center justify-center">
         <div className="text-center">
           <div className="text-5xl mb-4 animate-bounce">🍊</div>
           <p className="text-gray-500">로딩 중...</p>
@@ -176,7 +183,7 @@ export default function AdminProductEditPage() {
               className={`w-full px-4 py-3 rounded-xl border text-base focus:outline-none focus:ring-2 focus:ring-orange-500/20 ${
                 errors.name ? 'border-red-400 bg-red-50' : 'border-gray-200 bg-white'
               }`}
-              disabled={isSubmitting}
+              disabled={isSubmitting || imageBusy}
             />
             {errors.name && (
               <p className="mt-1 text-sm text-red-500">{errors.name}</p>
@@ -194,7 +201,7 @@ export default function AdminProductEditPage() {
               placeholder="상품 설명을 입력해주세요"
               rows={4}
               className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-white text-base focus:outline-none focus:ring-2 focus:ring-orange-500/20 resize-none"
-              disabled={isSubmitting}
+              disabled={isSubmitting || imageBusy}
             />
           </div>
 
@@ -213,7 +220,7 @@ export default function AdminProductEditPage() {
                 className={`w-full px-4 py-3 rounded-xl border text-base focus:outline-none focus:ring-2 focus:ring-orange-500/20 ${
                   errors.price ? 'border-red-400 bg-red-50' : 'border-gray-200 bg-white'
                 }`}
-                disabled={isSubmitting}
+                disabled={isSubmitting || imageBusy}
               />
               {errors.price && (
                 <p className="mt-1 text-sm text-red-500">{errors.price}</p>
@@ -234,7 +241,7 @@ export default function AdminProductEditPage() {
                 className={`w-full px-4 py-3 rounded-xl border text-base focus:outline-none focus:ring-2 focus:ring-orange-500/20 ${
                   errors.stock ? 'border-red-400 bg-red-50' : 'border-gray-200 bg-white'
                 }`}
-                disabled={isSubmitting}
+                disabled={isSubmitting || imageBusy}
               />
               {errors.stock && (
                 <p className="mt-1 text-sm text-red-500">{errors.stock}</p>
@@ -242,33 +249,20 @@ export default function AdminProductEditPage() {
             </div>
           </div>
 
-          <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-1.5">
-              이미지 URL
-            </label>
-            <input
-              type="text"
-              name="imageUrl"
-              value={form.imageUrl}
-              onChange={handleChange}
-              placeholder="https://..."
-              className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-white text-base focus:outline-none focus:ring-2 focus:ring-orange-500/20"
-              disabled={isSubmitting}
-            />
-          </div>
+          <ProductImageUpload value={form.imageUrl} onChange={imageUrl => setForm(prev => ({...prev, imageUrl}))} onBusyChange={setImageBusy} disabled={isSubmitting} />
 
           <div className="flex gap-3 pt-2">
             <button
               type="button"
               onClick={() => router.back()}
               className="flex-1 py-3 rounded-xl font-semibold text-gray-600 bg-gray-100 hover:bg-gray-200 transition-colors"
-              disabled={isSubmitting}
+              disabled={isSubmitting || imageBusy}
             >
               취소
             </button>
             <button
               type="submit"
-              disabled={isSubmitting}
+              disabled={isSubmitting || imageBusy}
               className={`flex-1 py-3 rounded-xl font-semibold transition-all ${
                 isSubmitting
                   ? 'bg-gray-300 text-gray-500 cursor-not-allowed'

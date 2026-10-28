@@ -1,0 +1,1 @@
+require('@next/env').loadEnvConfig(process.cwd()); const {PrismaClient}=require('@prisma/client');const p=new PrismaClient();p.$executeRaw`CREATE TABLE IF NOT EXISTS "SiteContent" (id TEXT PRIMARY KEY,data JSONB NOT NULL,"updatedAt" TIMESTAMP(3) NOT NULL)`.finally(()=>p.$disconnect());

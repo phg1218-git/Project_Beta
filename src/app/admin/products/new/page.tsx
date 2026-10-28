@@ -1,17 +1,20 @@
 'use client'
 
 import { useState } from 'react'
+import { ProductImageUpload } from '@/components/ProductImageUpload'
 import { useRouter } from 'next/navigation'
 
 export default function AdminProductNewPage() {
   const router = useRouter()
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [imageBusy, setImageBusy] = useState(false)
   const [formData, setFormData] = useState({
     name: '',
     description: '',
     price: '',
     stock: '',
     isActive: true,
+    imageUrl: '',
   })
   const [error, setError] = useState('')
 
@@ -25,6 +28,7 @@ export default function AdminProductNewPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    if (imageBusy || isSubmitting) return
     setIsSubmitting(true)
     setError('')
 
@@ -97,6 +101,7 @@ export default function AdminProductNewPage() {
           />
         </div>
 
+        <ProductImageUpload value={formData.imageUrl} onChange={imageUrl => setFormData(prev => ({...prev, imageUrl}))} onBusyChange={setImageBusy} disabled={isSubmitting} />
         <div className="grid grid-cols-2 gap-4">
           <div>
             <label className="block text-sm font-semibold text-gray-700 mb-2">
@@ -155,7 +160,7 @@ export default function AdminProductNewPage() {
           </button>
           <button
             type="submit"
-            disabled={isSubmitting}
+            disabled={isSubmitting || imageBusy}
             className={`flex-1 py-3 rounded-xl font-semibold transition-colors ${
               isSubmitting
                 ? 'bg-gray-300 text-gray-500 cursor-not-allowed'

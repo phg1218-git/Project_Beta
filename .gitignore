@@ -39,3 +39,6 @@ next-env.d.ts
 
 # prisma
 prisma/migrations/*/migration_lock.toml
+
+# Local upload sandbox
+.local/
