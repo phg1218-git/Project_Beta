@@ -3,7 +3,7 @@ import Link from 'next/link'
 import { auth } from '@/auth'
 import { contactText, getStoreSettingsForDisplay } from '@/lib/store-settings'
 
-// 메인 랜딩 페이지 - Hero Section + 브랜드 스토리 + 신뢰 요소
+// 메인 랜딩 페이지 - 만생귤 소개와 보관 안내
 export default async function HomePage() {
   const session = await auth()
   const content = await getHomeContent()
@@ -17,7 +17,7 @@ export default async function HomePage() {
         className="relative flex flex-col items-center justify-center text-center px-6 py-16"
         style={{
           background: 'linear-gradient(135deg, #FF8A00 0%, #FFC94A 100%)',
-          minHeight: '60vh',
+          minHeight: '52vh',
         }}
       >
         <div className="float-emoji text-7xl mb-6">🍊</div>
@@ -38,17 +38,8 @@ export default async function HomePage() {
         </Link>
       </section>
 
-      {/* 신뢰 요소 */}
-      <section className="py-10 px-6 bg-white">
-        <div className="max-w-3xl mx-auto grid grid-cols-3 gap-4 text-center">
-          <TrustItem emoji="🍊" title="가족 농장" desc="조천읍 직접 재배" />
-          <TrustItem emoji="📦" title="산지 직송" desc="농장에서 바로 발송" />
-          <TrustItem emoji="🏦" title="무통장입금" desc="입금 확인 후 발송" />
-        </div>
-      </section>
-
-      {/* 브랜드 스토리 */}
-      <section className="py-12 px-6" style={{ background: 'var(--bg)' }}>
+      {/* 만생귤 소개 */}
+      <section className="py-10 px-6" style={{ background: 'var(--bg)' }}>
         <div className="max-w-2xl mx-auto text-center">
           <h2 className="text-xl font-bold mb-4">
             {content.storyTitle}
@@ -103,50 +94,6 @@ export default async function HomePage() {
         </div>
       </section>
 
-      {/* 제주 귤의 제철 */}
-      <section className="py-12 px-6" style={{ background: 'var(--bg)' }}>
-        <div className="max-w-2xl mx-auto">
-          <h2 className="text-xl font-bold mb-2 text-center text-gray-900">
-            제주 귤의 제철과 종류
-          </h2>
-          <p className="text-center text-sm text-gray-500 mb-8">
-            시기마다 다른 제주 감귤의 맛
-          </p>
-          <div className="space-y-4">
-            {[
-              {
-                period: '9월 ~ 10월',
-                name: '극조생 온주밀감',
-                desc: '가장 먼저 나오는 귤로 껍질이 얇고 과즙이 풍부합니다. 새콤달콤한 맛이 강하며 제철의 시작을 알립니다.',
-                color: 'bg-yellow-100 text-yellow-700',
-              },
-              {
-                period: '11월 ~ 12월',
-                name: '조생 온주밀감',
-                desc: '감귤 하면 떠오르는 바로 그 맛. 당도와 산미의 균형이 가장 좋은 시기입니다. 오늘의귤이 가장 자신 있는 시즌입니다.',
-                color: 'bg-orange-100 text-orange-700',
-              },
-              {
-                period: '1월 ~ 2월',
-                name: '만감류 (한라봉·천혜향)',
-                desc: '겨울철 대표 프리미엄 감귤. 과육이 크고 향이 진하며 당도가 높습니다. 선물용으로 특히 인기가 좋습니다.',
-                color: 'bg-amber-100 text-amber-700',
-              },
-            ].map((item) => (
-              <div key={item.name} className="flex gap-4 items-start bg-white rounded-2xl p-4 shadow-sm">
-                <div className={`text-xs font-bold px-2 py-1 rounded-full flex-shrink-0 ${item.color}`}>
-                  {item.period}
-                </div>
-                <div>
-                  <h3 className="font-bold text-gray-800 text-sm mb-1">{item.name}</h3>
-                  <p className="text-xs text-gray-600 leading-relaxed">{item.desc}</p>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
       {/* CTA Section */}
       <section className="py-10 px-6 bg-white text-center">
         <p className="text-gray-500 text-sm mb-4">
@@ -176,16 +123,6 @@ export default async function HomePage() {
         {bankAccount && <p>입금 계좌: {bankAccount}</p>}
         <p className="mt-4 text-gray-600">© 2025 오늘의귤. All rights reserved.</p>
       </footer>
-    </div>
-  )
-}
-
-function TrustItem({ emoji, title, desc }: { emoji: string; title: string; desc: string }) {
-  return (
-    <div className="flex flex-col items-center">
-      <span className="text-3xl mb-2">{emoji}</span>
-      <span className="font-bold text-sm text-gray-800">{title}</span>
-      <span className="text-xs text-gray-500 mt-1">{desc}</span>
     </div>
   )
 }

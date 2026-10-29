@@ -121,6 +121,7 @@ export default async function AdminDashboardPage() {
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
         <QuickAction href="/admin/content" icon="✏️" label="메인 소개 설정" desc="소개 내용 수정" />
         <QuickAction href="/admin/orders" icon="📋" label="주문 관리" desc="입금확인 · 배송처리" />
+        <QuickAction href="/admin/shipping" icon="🚚" label="배송 작업" desc="엑셀 목록 · 송장 일괄 등록" />
         <QuickAction href="/admin/products" icon="🍊" label="상품 관리" desc="등록 · 수정 · 삭제" />
         <QuickAction href="/admin/revenue" icon="💰" label="수익 통계" desc="일별 · 주별 · 월별" />
         <QuickAction href="/admin/members" icon="👥" label="회원 관리" desc="회원 조회 · 관리" />

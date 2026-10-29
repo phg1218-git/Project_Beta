@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { formatPrice } from '@/lib/utils'
 import { PageHeader } from '@/components/PageHeader'
+import { LoadingOverlay } from '@/components/LoadingOverlay'
 
 interface CartItem {
   id: string
@@ -338,6 +339,7 @@ export default function CartPage() {
 
   return (
     <div className="page-enter pb-20">
+      {isOrdering && <LoadingOverlay message="주문을 접수하는 중..." />}
       {/* 토스트 알림 */}
       {toast.type !== 'idle' && (
         <div

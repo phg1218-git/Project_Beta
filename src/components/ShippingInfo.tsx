@@ -34,6 +34,26 @@ function getTrackingUrl(carrier: string | null, trackingNumber: string | null): 
   return carrierUrls[carrier] || `https://search.naver.com/search.naver?query=${carrier}+${trackingNumber}`
 }
 
+function CopyTrackingButton({ trackingNumber }: { trackingNumber: string }) {
+  const [message, setMessage] = useState('')
+
+  async function copy() {
+    try {
+      await navigator.clipboard.writeText(trackingNumber)
+      setMessage('복사됨')
+    } catch {
+      setMessage('복사 실패')
+    }
+  }
+
+  return (
+    <button type="button" onClick={copy} aria-label={`운송장번호 ${trackingNumber} 복사`}
+      className="shrink-0 rounded-lg border border-gray-200 px-2.5 py-1 text-xs font-semibold text-gray-700 hover:bg-gray-50">
+      {message || '번호 복사'}
+    </button>
+  )
+}
+
 export function ShippingInfo({ orderId, orderItems }: ShippingInfoProps) {
   const [shippingData, setShippingData] = useState<OrderItem[] | null>(null)
   const [isLoading, setIsLoading] = useState(true)
@@ -100,7 +120,10 @@ export function ShippingInfo({ orderId, orderItems }: ShippingInfoProps) {
                     </div>
                     <div className="flex items-center justify-between">
                       <span className="text-sm text-gray-500">송장번호</span>
-                      <span className="font-semibold text-gray-900 font-mono">{item.trackingNumber}</span>
+                      <span className="flex items-center gap-2">
+                        <span className="font-semibold text-gray-900 font-mono">{item.trackingNumber}</span>
+                        <CopyTrackingButton trackingNumber={item.trackingNumber!} />
+                      </span>
                     </div>
                     {item.shippedAt && (
                       <div className="flex items-center justify-between">
@@ -149,7 +172,10 @@ export function ShippingInfo({ orderId, orderItems }: ShippingInfoProps) {
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-sm text-gray-500">송장번호</span>
-                <span className="font-semibold text-gray-900 font-mono">{firstItem.trackingNumber}</span>
+                <span className="flex items-center gap-2">
+                  <span className="font-semibold text-gray-900 font-mono">{firstItem.trackingNumber}</span>
+                  <CopyTrackingButton trackingNumber={firstItem.trackingNumber} />
+                </span>
               </div>
               {firstItem.shippedAt && (
                 <div className="flex items-center justify-between">

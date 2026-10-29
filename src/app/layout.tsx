@@ -18,7 +18,7 @@ export const metadata: Metadata = {
     default: '오늘의귤 — 제주 산지 직송 감귤',
     template: '%s | 오늘의귤',
   },
-  description: '제주 조천읍 산지 직송 귤 판매 서비스 — 입도 1세대 가족 농장에서 키운 귤을 농장에서 직접 포장해 보내드립니다.',
+  description: '제주 조천읍에서 키운 만생귤을 농장에서 직접 포장해 보내드립니다.',
   keywords: ['제주귤', '감귤', '산지직송', '오늘의귤', '조천읍귤', '귤 선물', 'dailycitrus'],
   authors: [{ name: '오늘의귤' }],
   openGraph: {

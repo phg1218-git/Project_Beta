@@ -7,6 +7,7 @@ import { safeReturnPath } from '@/lib/redirect'
 import { AddressSearch } from '@/components/AddressSearch'
 import { isKoreanName, isProfilePhone } from '@/lib/profile-validation'
 import { ProfilePhoneInput } from '@/components/ProfilePhoneInput'
+import { LoadingOverlay } from '@/components/LoadingOverlay'
 
 interface FormData {
   name: string
@@ -172,6 +173,7 @@ function ProfileSetupContent() {
 
   return (
     <div className="page-enter">
+      {isSubmitting && <LoadingOverlay message="정보를 저장하는 중..." />}
       {/* 헤더 */}
       <div
         className="px-4 pt-8 pb-6 text-white text-center"

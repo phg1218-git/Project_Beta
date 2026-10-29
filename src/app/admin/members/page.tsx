@@ -3,6 +3,8 @@ import { prisma } from '@/lib/prisma'
 import { redirect } from 'next/navigation'
 import { formatPhoneNumber } from '@/lib/utils'
 import { AdminWithdrawButton } from '@/components/AdminWithdrawButton'
+import { AdminRoleButton } from '@/components/AdminRoleButton'
+import { isSuperAdminEmail } from '@/lib/admin-roles'
 
 export const dynamic = 'force-dynamic'
 
@@ -34,6 +36,7 @@ export default async function AdminMembersPage() {
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-gray-900">👥 회원 관리</h1>
         <p className="text-gray-500 mt-1">전체 회원 {members.length}명 · 전화·이메일로 받은 탈퇴 요청은 본인 확인 후 &apos;탈퇴 처리&apos;로 진행합니다.</p>
+        {session.user.isSuperAdmin && <p className="text-sm text-orange-700 mt-2">최고관리자 계정입니다. 이 화면에서 일반 관리자를 지정하거나 해제할 수 있습니다. 새로 지정된 관리자는 다시 로그인하면 관리자 메뉴가 표시됩니다.</p>}
       </div>
 
       {/* 회원 목록 */}
@@ -98,12 +101,17 @@ export default async function AdminMembersPage() {
                     </td>
                     <td className="px-4 py-3">
                       <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                        member.role === 'ADMIN'
+                        isSuperAdminEmail(member.email)
+                          ? 'bg-amber-100 text-amber-800'
+                          : member.role === 'ADMIN'
                           ? 'bg-purple-100 text-purple-700'
                           : 'bg-gray-100 text-gray-600'
                       }`}>
-                        {member.role === 'ADMIN' ? '관리자' : '일반회원'}
+                        {isSuperAdminEmail(member.email) ? '최고관리자' : member.role === 'ADMIN' ? '관리자' : '일반회원'}
                       </span>
+                      {session.user.isSuperAdmin && member.email && !isSuperAdminEmail(member.email) && member.id !== session.user.id && (
+                        <AdminRoleButton userId={member.id} name={member.name || member.email} isAdmin={member.role === 'ADMIN'} />
+                      )}
                     </td>
                     <td className="px-4 py-3">
                       <span className="text-sm text-gray-500">
@@ -111,7 +119,7 @@ export default async function AdminMembersPage() {
                       </span>
                     </td>
                     <td className="px-4 py-3">
-                      {member.email && member.role !== 'ADMIN' && (
+                      {member.email && member.role !== 'ADMIN' && !isSuperAdminEmail(member.email) && (
                         <AdminWithdrawButton userId={member.id} name={member.name || member.email} />
                       )}
                     </td>

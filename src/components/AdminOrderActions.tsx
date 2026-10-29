@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { AdminCancelRefund } from '@/components/AdminCancelRefund'
+import { LoadingOverlay } from '@/components/LoadingOverlay'
 
 interface OrderItem {
   id: string
@@ -154,6 +155,7 @@ export function AdminOrderActions({ order }: { order: Order }) {
 
   return (
     <div className="flex flex-col gap-1.5">
+      {isLoading && <LoadingOverlay message="주문을 처리하는 중..." />}
       {/* 인라인 상태 메시지 */}
       {actionState.type === 'confirm' && (
         <div className="flex flex-col gap-1 p-2 bg-yellow-50 border border-yellow-200 rounded-lg text-xs">

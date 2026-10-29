@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation'
 import { AddressSearch } from '@/components/AddressSearch'
 import { formatPhoneNumber, isValidPhoneNumber, extractPhoneNumbers } from '@/lib/utils'
 import { PageHeader } from '@/components/PageHeader'
+import { LoadingOverlay } from '@/components/LoadingOverlay'
 
 interface ShippingAddress {
   id: string
@@ -257,6 +258,7 @@ export default function ShippingAddressPage() {
 
   return (
     <div className="page-enter">
+      {isSubmitting && <LoadingOverlay message="배송지를 저장하는 중..." />}
       {/* 헤더 */}
       <PageHeader
         title="배송지 관리"

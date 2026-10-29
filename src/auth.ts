@@ -4,10 +4,7 @@ import Naver from 'next-auth/providers/naver'
 import Kakao from 'next-auth/providers/kakao'
 import { prisma } from '@/lib/prisma'
 import { safeRedirect } from '@/lib/redirect'
-
-const ADMIN_EMAILS: string[] = process.env.ADMIN_EMAILS
-  ? process.env.ADMIN_EMAILS.split(',').map((e) => e.trim()).filter(Boolean)
-  : []
+import { isSuperAdminEmail } from '@/lib/admin-roles'
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   // Netlify/preview 환경 등 AUTH_URL이 없어도 동작하도록 trustHost를 활성화
@@ -46,7 +43,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       }
 
       try {
-        const isAdmin = ADMIN_EMAILS.includes(user.email)
+        const isAdmin = isSuperAdminEmail(user.email)
 
         const existingUser = await prisma.user.findUnique({
           where: { email: user.email },
@@ -80,7 +77,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
             },
           })
         } else {
-          // 기존 사용자: 관리자 이메일이면 role 업데이트
+          // 최고관리자 이메일은 DB에서도 ADMIN으로 유지한다.
           if (isAdmin && existingUser.role !== 'ADMIN') {
             await prisma.user.update({
               where: { id: existingUser.id },
@@ -154,8 +151,8 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           token.addressBase = dbUser.addressBase
           token.addressDetail = dbUser.addressDetail
           token.profileComplete = dbUser.profileComplete
-          // 권한은 DB 기준 (ADMIN_EMAILS는 로그인 시 승격에만 사용) — DB에서 회수하면 다음 갱신부터 반영
-          token.role = dbUser.role
+          token.role = isSuperAdminEmail(dbUser.email) ? 'ADMIN' : dbUser.role
+          token.isSuperAdmin = isSuperAdminEmail(dbUser.email)
         }
       }
 
@@ -168,9 +165,11 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           token.addressBase = profile.addressBase
           token.addressDetail = profile.addressDetail
           token.profileComplete = profile.profileComplete
-          token.role = profile.role
+          token.role = isSuperAdminEmail(profile.email) ? 'ADMIN' : profile.role
+          token.isSuperAdmin = isSuperAdminEmail(profile.email)
         } else {
           token.profileComplete = false
+          token.isSuperAdmin = false
         }
       }
 
@@ -182,6 +181,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         session.user.name = token.name
         session.user.id = token.id as string
         session.user.role = token.role as 'USER' | 'ADMIN'
+        session.user.isSuperAdmin = token.isSuperAdmin === true
         session.user.profileComplete = token.profileComplete as boolean
         session.user.phone = token.phone as string | null | undefined
         session.user.addressBase = token.addressBase as string | null | undefined
@@ -211,6 +211,7 @@ declare module 'next-auth' {
       addressBase?: string | null
       addressDetail?: string | null
       role: 'USER' | 'ADMIN'
+      isSuperAdmin: boolean
       profileComplete: boolean
     }
   }

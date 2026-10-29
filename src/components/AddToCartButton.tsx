@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
+import { LoadingOverlay } from '@/components/LoadingOverlay'
 
 interface Props {
   productId: string
@@ -75,6 +76,7 @@ export function AddToCartButton({ productId, productName, maxStock, isSoldOut }:
 
   return (
     <div className="space-y-4">
+      {isAdding && <LoadingOverlay message="장바구니에 담는 중..." />}
       {/* 토스트 */}
       {toast.type !== 'idle' && (
         <div className={`px-4 py-3 rounded-lg text-sm font-medium ${

@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { defaultStoreSettings, type StoreSettingsData } from '@/lib/store-settings-data'
+import { LoadingOverlay } from '@/components/LoadingOverlay'
 
 type TextField = Exclude<keyof StoreSettingsData, 'gapCertified' | 'shippingFee'>
 const groups: { title: string; fields: { key: TextField; label: string; multiline?: boolean }[] }[] = [
@@ -70,6 +71,7 @@ export function StoreSettingsForm() {
 
   return (
     <form onSubmit={save} className="space-y-8">
+      {saving && <LoadingOverlay message="설정을 저장하는 중..." />}
       <p className="text-sm text-gray-600">저장한 내용은 고객에게 공개됩니다. 빈 항목은 고객 화면에서 숨겨집니다. 메인 제목·소개·농장 이야기는 <a href="/admin/content" className="underline">메인 소개 설정</a>에서 수정합니다.</p>
       <fieldset disabled={saving} className="space-y-8 disabled:opacity-70">
         {groups.map((group) => (

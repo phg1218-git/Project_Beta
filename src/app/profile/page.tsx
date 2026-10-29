@@ -61,7 +61,7 @@ export default function ProfilePage() {
             <div className="text-sm opacity-85">{session.user.email}</div>
             {session.user.role === 'ADMIN' && (
               <span className="inline-block mt-1 px-2 py-0.5 bg-white/20 rounded-full text-xs font-semibold">
-                관리자
+                {session.user.isSuperAdmin ? '최고관리자' : '관리자'}
               </span>
             )}
           </div>

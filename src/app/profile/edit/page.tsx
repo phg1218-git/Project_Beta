@@ -8,6 +8,7 @@ import { formatPhoneNumber } from '@/lib/utils'
 import { isKoreanName, isProfilePhone } from '@/lib/profile-validation'
 import { ProfilePhoneInput } from '@/components/ProfilePhoneInput'
 import { PageHeader } from '@/components/PageHeader'
+import { LoadingOverlay } from '@/components/LoadingOverlay'
 
 interface FormData {
   name: string
@@ -185,6 +186,7 @@ export default function ProfileEditPage() {
 
   return (
     <div className="page-enter">
+      {isSubmitting && <LoadingOverlay message="정보를 저장하는 중..." />}
       {/* 헤더 */}
       <PageHeader title="회원정보 수정" />
 

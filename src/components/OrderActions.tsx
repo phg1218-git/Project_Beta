@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { LoadingOverlay } from '@/components/LoadingOverlay'
 
 interface OrderActionsProps {
   orderId: string
@@ -71,6 +72,7 @@ export function OrderActions({ orderId, status: _status, canRequestDeposit, canC
 
   return (
     <div className="px-4 py-4 space-y-3">
+      {isLoading && <LoadingOverlay message="주문을 처리하는 중..." />}
       {/* 입금확인 요청 버튼 */}
       {canRequestDeposit && (
         <button

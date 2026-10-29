@@ -120,6 +120,9 @@ export default async function AdminOrdersPage({ searchParams }: PageProps) {
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-gray-900">📋 주문 관리</h1>
         <p className="text-gray-500 mt-1">입금확인 요청을 확인하고, 실제 계좌 입금 확인 후 입금완료 처리해주세요. 요청 전 주문도 직접 처리할 수 있습니다.</p>
+        <Link href="/admin/shipping" className="inline-flex mt-3 px-4 py-2 rounded-lg bg-orange-500 text-white text-sm font-semibold">
+          배송 목록 엑셀 · 송장 일괄 등록
+        </Link>
       </div>
 
       {/* 상태 필터 탭 */}

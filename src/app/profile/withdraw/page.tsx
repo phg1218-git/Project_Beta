@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { signOut, useSession } from 'next-auth/react'
 import Link from 'next/link'
 import { PageHeader } from '@/components/PageHeader'
+import { LoadingOverlay } from '@/components/LoadingOverlay'
 
 export default function WithdrawPage() {
   const { status } = useSession()
@@ -35,6 +36,7 @@ export default function WithdrawPage() {
 
   return (
     <div className="page-enter">
+      {busy && <LoadingOverlay message="탈퇴를 처리하는 중..." />}
       <PageHeader title="회원 탈퇴" />
       <div className="px-4 py-6 space-y-4">
         <section className="bg-white rounded-2xl shadow-sm p-5 space-y-3 text-sm text-gray-700 leading-relaxed">
