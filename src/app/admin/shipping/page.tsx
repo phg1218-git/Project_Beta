@@ -42,22 +42,17 @@ export default async function AdminShippingPage({ searchParams }: PageProps) {
 
   const params = await searchParams
   const today = new Date(Date.now() + 9 * 60 * 60 * 1000).toISOString().slice(0, 10)
-  const fromValue = params.from ?? today
-  const toValue = params.to ?? today
-  const from = koreanDate(fromValue)
-  const to = koreanDate(toValue)
+  const fromValue = koreanDate(params.from) ? params.from! : today
+  const toValue = koreanDate(params.to) ? params.to! : today
+  const from = koreanDate(fromValue)!
+  const to = koreanDate(toValue)!
   const status = params.status === 'all' ? 'all' : 'ready'
   const parsedPage = Number(params.page)
   const page = Number.isSafeInteger(parsedPage) && parsedPage > 0 ? parsedPage : 1
   const where: Prisma.OrderItemWhereInput = status === 'ready' ? { ...readyWhere } : {}
-  if (from || to) {
-    const createdAt: Prisma.DateTimeFilter = {}
-    if (from) createdAt.gte = from
-    if (to) createdAt.lt = new Date(to.getTime() + 24 * 60 * 60 * 1000)
-    where.order = {
-      ...(status === 'ready' ? { status: { in: ['PAYMENT_CONFIRMED', 'SHIPPING'] as const } } : {}),
-      createdAt,
-    }
+  where.order = {
+    ...(status === 'ready' ? { status: { in: ['PAYMENT_CONFIRMED', 'SHIPPING'] as const } } : {}),
+    createdAt: { gte: from, lt: new Date(to.getTime() + 24 * 60 * 60 * 1000) },
   }
 
   const [pendingCount, total, items] = await Promise.all([
@@ -88,7 +83,7 @@ export default async function AdminShippingPage({ searchParams }: PageProps) {
   }
 
   return (
-    <div className="p-4 md:p-8 max-w-6xl">
+    <div className="p-4 md:p-8 w-full">
       <h1 className="text-2xl font-bold text-gray-900 mb-2">📦 배송 작업</h1>
       <p className="text-sm text-gray-600 mb-6">미발송 목록을 엑셀로 받고, CJ 운송장번호를 한 번에 등록합니다.</p>
       <ShippingWorkbookManager pendingCount={pendingCount} />
@@ -98,12 +93,12 @@ export default async function AdminShippingPage({ searchParams }: PageProps) {
         <form method="GET" action="/admin/shipping" className="flex flex-wrap items-end gap-3 mb-5">
           <label className="text-sm text-gray-700">
             <span className="block mb-1">주문일 시작</span>
-            <input type="date" name="from" defaultValue={from ? fromValue : ''}
+            <input type="date" name="from" key={fromValue} defaultValue={fromValue}
               className="px-3 py-2 border border-gray-200 rounded-lg" />
           </label>
           <label className="text-sm text-gray-700">
             <span className="block mb-1">주문일 종료</span>
-            <input type="date" name="to" defaultValue={to ? toValue : ''}
+            <input type="date" name="to" key={toValue} defaultValue={toValue}
               className="px-3 py-2 border border-gray-200 rounded-lg" />
           </label>
           <label className="text-sm text-gray-700">
