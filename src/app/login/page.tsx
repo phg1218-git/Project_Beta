@@ -55,16 +55,19 @@ function LoginContent() {
     }
   }, [status, router, callbackUrl])
 
+  // 로그인 직후엔 기본정보 입력 화면을 먼저 거친다. 이미 입력한 회원은 미들웨어가 바로 callbackUrl로 보낸다.
+  const afterLoginUrl = `/profile/setup?callbackUrl=${encodeURIComponent(callbackUrl)}`
+
   const handleGoogleLogin = () => {
-    signIn('google', { callbackUrl })
+    signIn('google', { callbackUrl: afterLoginUrl })
   }
 
   const handleNaverLogin = () => {
-    signIn('naver', { callbackUrl })
+    signIn('naver', { callbackUrl: afterLoginUrl })
   }
 
   const handleKakaoLogin = () => {
-    signIn('kakao', { callbackUrl })
+    signIn('kakao', { callbackUrl: afterLoginUrl })
   }
 
   if (status === 'loading' || status === 'authenticated') {

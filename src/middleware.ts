@@ -29,8 +29,9 @@ export default auth(async (req) => {
 
   // 로그인 했지만 프로필 미완성인 경우
   if (isLoggedIn && !isProfileComplete) {
-    // /profile/setup, /login 과 안내 페이지(소개·FAQ·개인정보처리방침 등)는 통과
-    const allowedForIncompleteProfile = ['/profile/setup', '/login', '/about', '/faq', '/privacy', '/support', '/policies']
+    // 홈·상품 둘러보기와 안내 페이지는 통과 — 장바구니·주문 등 회원 화면만 기본정보를 요구한다.
+    // (주문 API도 profileComplete를 다시 검사한다)
+    const allowedForIncompleteProfile = ['/', '/products', '/profile/setup', '/login', '/about', '/faq', '/privacy', '/support', '/policies']
     const isAllowed = allowedForIncompleteProfile.some(
       (path) => pathname === path || pathname.startsWith(path + '/')
     )
