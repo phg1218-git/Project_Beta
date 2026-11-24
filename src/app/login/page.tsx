@@ -43,6 +43,9 @@ function ErrorBanner() {
   )
 }
 
+// 네이버 로그인 검수 완료 전까지 버튼 숨김 — 검수 통과 후 true로 변경
+const NAVER_LOGIN_ENABLED = false
+
 function LoginContent() {
   const searchParams = useSearchParams()
   const callbackUrl = safeReturnPath(searchParams.get('callbackUrl'))
@@ -107,13 +110,15 @@ function LoginContent() {
           Google로 시작하기
         </button>
 
-        <button
-          onClick={handleNaverLogin}
-          className="flex items-center justify-center gap-3 w-full h-13 px-4 py-3 bg-[#03C75A] text-white font-semibold rounded-2xl shadow-sm hover:shadow-md transition-shadow min-h-[52px]"
-        >
-          <NaverIcon />
-          네이버로 시작하기
-        </button>
+        {NAVER_LOGIN_ENABLED && (
+          <button
+            onClick={handleNaverLogin}
+            className="flex items-center justify-center gap-3 w-full h-13 px-4 py-3 bg-[#03C75A] text-white font-semibold rounded-2xl shadow-sm hover:shadow-md transition-shadow min-h-[52px]"
+          >
+            <NaverIcon />
+            네이버로 시작하기
+          </button>
+        )}
 
         <button
           onClick={handleKakaoLogin}
