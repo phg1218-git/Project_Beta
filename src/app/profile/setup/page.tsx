@@ -50,11 +50,13 @@ function ProfileSetupContent() {
   }, [session])
 
   // 이미 프로필 완성된 사용자는 메인으로 리다이렉트
+  // 하단 탭 prefetch가 미완성 상태의 미들웨어 리다이렉트(/profile/setup)를 캐시하므로
+  // 클라이언트 라우터 대신 전체 페이지 이동으로 서버에서 다시 판단받는다.
   useEffect(() => {
     if (status === 'authenticated' && session?.user?.profileComplete) {
-      router.replace(callbackUrl)
+      window.location.replace(callbackUrl)
     }
-  }, [status, session, router, callbackUrl])
+  }, [status, session, callbackUrl])
 
   // 로딩 중
   if (status === 'loading') {
@@ -161,8 +163,9 @@ function ProfileSetupContent() {
         addressDetail: formData.addressDetail,
       })
 
-      // 성공 시 메인 페이지로 이동
-      router.replace(callbackUrl)
+      // 성공 시 원래 가려던 곳으로 이동 (캐시된 리다이렉트를 피하려고 전체 페이지 이동)
+      window.location.replace(callbackUrl)
+      return
     } catch (error) {
       console.error('프로필 저장 오류:', error)
       setErrors({ general: '네트워크 오류가 발생했습니다. 잠시 후 다시 시도해주세요.' })
