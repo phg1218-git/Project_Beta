@@ -41,8 +41,11 @@ export default async function AdminShippingPage({ searchParams }: PageProps) {
   if (!await adminAuth()) redirect('/')
 
   const params = await searchParams
-  const from = koreanDate(params.from)
-  const to = koreanDate(params.to)
+  const today = new Date(Date.now() + 9 * 60 * 60 * 1000).toISOString().slice(0, 10)
+  const fromValue = params.from ?? today
+  const toValue = params.to ?? today
+  const from = koreanDate(fromValue)
+  const to = koreanDate(toValue)
   const status = params.status === 'all' ? 'all' : 'ready'
   const parsedPage = Number(params.page)
   const page = Number.isSafeInteger(parsedPage) && parsedPage > 0 ? parsedPage : 1
@@ -63,7 +66,8 @@ export default async function AdminShippingPage({ searchParams }: PageProps) {
     prisma.orderItem.findMany({
       where,
       select: {
-        id: true, quantity: true, recipientName: true, trackingNumber: true,
+        id: true, quantity: true, recipientName: true, recipientPhone: true,
+        recipientAddressBase: true, recipientAddressDetail: true, trackingNumber: true,
         shippedAt: true, deliveredAt: true,
         product: { select: { name: true } },
         order: { select: { id: true, createdAt: true, status: true } },
@@ -76,8 +80,8 @@ export default async function AdminShippingPage({ searchParams }: PageProps) {
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE))
   const pageHref = (nextPage: number) => {
     const query = new URLSearchParams()
-    if (from) query.set('from', params.from!)
-    if (to) query.set('to', params.to!)
+    query.set('from', fromValue)
+    query.set('to', toValue)
     if (status === 'all') query.set('status', 'all')
     query.set('page', String(nextPage))
     return `/admin/shipping?${query.toString()}`
@@ -94,12 +98,12 @@ export default async function AdminShippingPage({ searchParams }: PageProps) {
         <form method="GET" action="/admin/shipping" className="flex flex-wrap items-end gap-3 mb-5">
           <label className="text-sm text-gray-700">
             <span className="block mb-1">주문일 시작</span>
-            <input type="date" name="from" defaultValue={from ? params.from : ''}
+            <input type="date" name="from" defaultValue={from ? fromValue : ''}
               className="px-3 py-2 border border-gray-200 rounded-lg" />
           </label>
           <label className="text-sm text-gray-700">
             <span className="block mb-1">주문일 종료</span>
-            <input type="date" name="to" defaultValue={to ? params.to : ''}
+            <input type="date" name="to" defaultValue={to ? toValue : ''}
               className="px-3 py-2 border border-gray-200 rounded-lg" />
           </label>
           <label className="text-sm text-gray-700">
@@ -124,6 +128,9 @@ export default async function AdminShippingPage({ searchParams }: PageProps) {
                   <th className="px-3 py-3 text-left whitespace-nowrap">주문번호</th>
                   <th className="px-3 py-3 text-left">상품</th>
                   <th className="px-3 py-3 text-left whitespace-nowrap">받는 분</th>
+                  <th className="px-3 py-3 text-left whitespace-nowrap">전화번호</th>
+                  <th className="px-3 py-3 text-left">주소</th>
+                  <th className="px-3 py-3 text-left">상세주소</th>
                   <th className="px-3 py-3 text-right whitespace-nowrap">수량</th>
                   <th className="px-3 py-3 text-left whitespace-nowrap">상태</th>
                   <th className="px-3 py-3 text-left whitespace-nowrap">운송장번호</th>
@@ -136,6 +143,9 @@ export default async function AdminShippingPage({ searchParams }: PageProps) {
                     <td className="px-3 py-3 whitespace-nowrap font-mono text-xs">{item.order.id.slice(-8).toUpperCase()}</td>
                     <td className="px-3 py-3 min-w-40">{item.product.name}</td>
                     <td className="px-3 py-3 whitespace-nowrap">{item.recipientName}</td>
+                    <td className="px-3 py-3 whitespace-nowrap">{item.recipientPhone}</td>
+                    <td className="px-3 py-3 min-w-48">{item.recipientAddressBase}</td>
+                    <td className="px-3 py-3 min-w-32">{item.recipientAddressDetail || '—'}</td>
                     <td className="px-3 py-3 text-right">{item.quantity}</td>
                     <td className="px-3 py-3 whitespace-nowrap">{itemStatus(item)}</td>
                     <td className="px-3 py-3 whitespace-nowrap font-mono text-xs">{item.trackingNumber || '—'}</td>
