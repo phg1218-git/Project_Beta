@@ -79,5 +79,7 @@ export default auth(async (req) => {
 })
 
 export const config = {
-  matcher: ['/((?!_next/static|_next/image|favicon.ico|.*\\..*).*)'],
+  // /api는 제외 — auth() 래퍼가 요청 시점의 (옛) 세션 쿠키를 응답에 다시 써서
+  // /api/auth/session의 update() 결과(profileComplete 등)를 덮어쓰는 문제가 있었다.
+  matcher: ['/((?!api|_next/static|_next/image|favicon.ico|.*\\..*).*)'],
 }

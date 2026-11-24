@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, Suspense } from 'react'
+import { useState, useEffect, useRef, Suspense } from 'react'
 import { useSession } from 'next-auth/react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { safeReturnPath } from '@/lib/redirect'
@@ -48,6 +48,16 @@ function ProfileSetupContent() {
       }))
     }
   }, [session])
+
+  // DB엔 저장됐지만 세션 쿠키가 미완성으로 남은 회원(이전 쿠키 덮어쓰기 버그)을 위해
+  // 진입 시 한 번 DB 기준으로 세션을 갱신한다. 완성 상태면 아래 effect가 이동시킨다.
+  const syncedRef = useRef(false)
+  useEffect(() => {
+    if (status === 'authenticated' && !session?.user?.profileComplete && !syncedRef.current) {
+      syncedRef.current = true
+      update()
+    }
+  }, [status, session, update])
 
   // 이미 프로필 완성된 사용자는 메인으로 리다이렉트
   // 하단 탭 prefetch가 미완성 상태의 미들웨어 리다이렉트(/profile/setup)를 캐시하므로
