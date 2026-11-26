@@ -1,3 +1,4 @@
+import { BankAccountInfo } from '@/components/BankAccountInfo'
 import { auth } from '@/auth'
 import { prisma } from '@/lib/prisma'
 import { redirect, notFound } from 'next/navigation'
@@ -63,14 +64,7 @@ export default async function OrderDetailPage({ params }: PageProps) {
       {/* 계좌 정보 안내 - DRAFT 상태일 때만 표시 */}
       {order.status === 'DRAFT' && (
         <div className="px-4 py-3 bg-gradient-to-r from-orange-50 to-yellow-50 border-b border-orange-200">
-          <div className="bg-white rounded-xl p-3 shadow-sm border border-orange-100">
-            <p className="text-center text-xs text-orange-600 font-semibold mb-1">
-              💳 입금 계좌
-            </p>
-            <p className="text-center text-sm font-bold text-gray-900">
-              {order.bankAccountSnapshot || BANK_ACCOUNT_INFO}
-            </p>
-          </div>
+          <BankAccountInfo account={order.bankAccountSnapshot || BANK_ACCOUNT_INFO} />
         </div>
       )}
 

@@ -1,5 +1,6 @@
 import { getHomeContent } from '@/lib/site-content'
 import Link from 'next/link'
+import { BankAccountInfo } from '@/components/BankAccountInfo'
 import { auth } from '@/auth'
 import { contactText, getStoreSettingsForDisplay } from '@/lib/store-settings'
 
@@ -106,6 +107,8 @@ export default async function HomePage() {
           상품 둘러보기
         </Link>
       </section>
+
+      <section className="px-6 py-6"><BankAccountInfo account={bankAccount || ''} /></section>
 
       {/* Footer */}
       <footer className="py-8 px-6 bg-gray-900 text-gray-400 text-center text-xs leading-relaxed">

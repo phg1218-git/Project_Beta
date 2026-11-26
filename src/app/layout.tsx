@@ -68,7 +68,7 @@ export default function RootLayout({
         )}
       </head>
       <body>
-        <SessionProvider>
+        <SessionProvider refetchInterval={60} refetchOnWindowFocus>
           <AppShell>
             {/* 상단 헤더 */}
             <OrangeTopHeader />

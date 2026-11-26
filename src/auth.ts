@@ -180,8 +180,11 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       if (token) {
         session.user.name = token.name
         session.user.id = token.id as string
-        session.user.role = token.role as 'USER' | 'ADMIN'
-        session.user.isSuperAdmin = token.isSuperAdmin === true
+        const currentUser = await prisma.user.findUnique({
+          where: { id: token.id as string }, select: { role: true, email: true },
+        })
+        session.user.isSuperAdmin = !!currentUser && isSuperAdminEmail(currentUser.email)
+        session.user.role = session.user.isSuperAdmin ? 'ADMIN' : currentUser?.role ?? 'USER'
         session.user.profileComplete = token.profileComplete as boolean
         session.user.phone = token.phone as string | null | undefined
         session.user.addressBase = token.addressBase as string | null | undefined

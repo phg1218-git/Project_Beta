@@ -129,6 +129,16 @@ export function AddToCartButton({ productId, productName, maxStock, isSoldOut }:
         </div>
       </div>
 
+      <button
+        onClick={() => {
+          const path = `/checkout?productId=${encodeURIComponent(productId)}&quantity=${quantity}`
+          router.push(session?.user ? path : `/login?callbackUrl=${encodeURIComponent(path)}`)
+        }}
+        disabled={isAdding || status === 'loading'}
+        className="w-full py-3 bg-orange-600 text-white font-bold rounded-lg hover:bg-orange-700 disabled:opacity-50 transition"
+      >
+        빠른구매
+      </button>
       {/* 장바구니 추가 버튼 */}
       <button
         onClick={handleAddToCart}

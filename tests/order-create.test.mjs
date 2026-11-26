@@ -94,3 +94,11 @@ test('배열이 아닌 상품·중복 상품·소수 수량·잘못된 요청 �
   assert.equal((await h.send(h.purchase, 'bad')).status, 400)
   assert.equal(h.stats().orders, 0)
 })
+
+
+test('빠른구매는 주문과 재고만 변경하고 장바구니는 유지', async () => {
+  const h = harness()
+  const response = await h.send({ items: h.purchase.items, fromCart: false })
+  assert.equal(response.status, 201)
+  assert.deepEqual(h.stats(), { stock: 8, orders: 1, deleted: 0 })
+})

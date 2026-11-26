@@ -206,6 +206,13 @@ export default async function AdminOrdersPage({ searchParams }: PageProps) {
                         <p className="text-xs text-gray-500">{order.user?.email}</p>
                         <p className="text-xs text-orange-700">입금자: {order.depositorName || order.user?.name || '미등록'}</p>
                         {order.requestedDepositAt && <p className="text-xs text-gray-500">확인요청: {new Date(order.requestedDepositAt).toLocaleString('ko-KR', { timeZone: 'Asia/Seoul' })}</p>}
+                        {Array.from(new Set(order.items.map((item) =>
+                          [item.recipientAddressBase, item.recipientAddressDetail].filter(Boolean).join(' ')
+                        ))).filter(Boolean).map((address) => (
+                          <p key={address} className="mt-1 max-w-xs text-xs leading-relaxed text-gray-600 break-words">
+                            배송지: {address}
+                          </p>
+                        ))}
                       </div>
                     </td>
                     <td className="px-4 py-3">

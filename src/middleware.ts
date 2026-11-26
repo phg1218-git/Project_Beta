@@ -1,5 +1,14 @@
 import { safeReturnPath } from '@/lib/redirect'
-import { auth } from '@/auth'
+import NextAuth from 'next-auth'
+
+// Middleware only checks the signed login cookie; DB authorization runs on the server.
+const { auth } = NextAuth({
+  trustHost: true, providers: [], session: { strategy: 'jwt' },
+  callbacks: { session({ session, token }) {
+    session.user.profileComplete = token.profileComplete === true
+    return session
+  } },
+})
 import { NextResponse } from 'next/server'
 
 export default auth(async (req) => {
@@ -28,7 +37,7 @@ export default auth(async (req) => {
   const isProfileComplete = session?.user?.profileComplete === true
 
   // 로그인 했지만 프로필 미완성인 경우
-  if (isLoggedIn && !isProfileComplete) {
+  if (isLoggedIn && !isProfileComplete && !pathname.startsWith('/admin')) {
     // 홈·상품 둘러보기와 안내 페이지는 통과 — 장바구니·주문 등 회원 화면만 기본정보를 요구한다.
     // (주문 API도 profileComplete를 다시 검사한다)
     const allowedForIncompleteProfile = ['/', '/products', '/profile/setup', '/login', '/about', '/faq', '/privacy', '/support', '/policies']
@@ -52,9 +61,7 @@ export default auth(async (req) => {
       loginUrl.searchParams.set('callbackUrl', pathname)
       return NextResponse.redirect(loginUrl)
     }
-    if (session?.user?.role !== 'ADMIN') {
-      return NextResponse.redirect(new URL('/', nextUrl.origin))
-    }
+    // Current DB role is checked by the admin layout and each admin API.
     return NextResponse.next()
   }
 
