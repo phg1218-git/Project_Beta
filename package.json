@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "test": "node --test tests/*.test.mjs && tsx --test tests/shipping-sheet.test.ts tests/order-number.test.ts && tsx scripts/test-confirm-payment.ts && tsx scripts/test-cancel-order.ts && tsx scripts/test-profile-validation.ts",
+    "test": "node --test tests/*.test.mjs && tsx --test tests/shipping-sheet.test.ts tests/order-number.test.ts tests/date-range.test.ts && tsx scripts/test-confirm-payment.ts && tsx scripts/test-cancel-order.ts && tsx scripts/test-profile-validation.ts",
     "typecheck": "tsc --noEmit --incremental false",
     "test:integration": "node scripts/test-integration.mjs",
     "postinstall": "prisma generate",

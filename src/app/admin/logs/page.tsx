@@ -1,6 +1,7 @@
 import { adminAuth } from '@/lib/admin-auth'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
+import { kstDateRange } from '@/lib/date-range'
 
 export const dynamic = 'force-dynamic'
 
@@ -43,15 +44,8 @@ async function getLogs(params: URLSearchParams): Promise<{ logs: LogEntry[]; tot
 
     if (action) where.action = action
     if (adminId) where.adminId = adminId
-    if (from || to) {
-      where.createdAt = {}
-      if (from) where.createdAt.gte = new Date(from)
-      if (to) {
-        const d = new Date(to)
-        d.setHours(23, 59, 59, 999)
-        where.createdAt.lte = d
-      }
-    }
+    const range = kstDateRange(from, to)
+    where.createdAt = { gte: range.gte, lt: range.lt }
 
     const [logs, total] = await Promise.all([
       db.adminActionLog.findMany({
@@ -76,8 +70,10 @@ export default async function AdminLogsPage({ searchParams }: PageProps) {
   const sp = new URLSearchParams()
   if (params.action) sp.set('action', params.action)
   if (params.adminId) sp.set('adminId', params.adminId)
-  if (params.from) sp.set('from', params.from)
-  if (params.to) sp.set('to', params.to)
+  // 기본 조회기간: 7일 전 ~ 오늘 (한국시간)
+  const range = kstDateRange(params.from, params.to)
+  sp.set('from', range.fromValue)
+  sp.set('to', range.toValue)
   sp.set('page', params.page ?? '1')
 
   const page = Math.max(1, parseInt(params.page ?? '1', 10))
@@ -124,14 +120,16 @@ export default async function AdminLogsPage({ searchParams }: PageProps) {
         <input
           type="date"
           name="from"
-          defaultValue={params.from ?? ''}
+          key={range.fromValue}
+          defaultValue={range.fromValue}
           className="px-2 py-2 text-sm border border-gray-200 rounded-lg"
         />
         <span className="text-xs text-gray-400">~</span>
         <input
           type="date"
           name="to"
-          defaultValue={params.to ?? ''}
+          key={range.toValue}
+          defaultValue={range.toValue}
           className="px-2 py-2 text-sm border border-gray-200 rounded-lg"
         />
         <button

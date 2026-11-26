@@ -5,6 +5,7 @@ import { adminAuth } from '@/lib/admin-auth'
 import { prisma } from '@/lib/prisma'
 import { ShippingWorkbookManager } from '@/components/ShippingWorkbookManager'
 import { displayOrderNumber } from '@/lib/order-number'
+import { kstDateRange } from '@/lib/date-range'
 
 export const dynamic = 'force-dynamic'
 
@@ -16,14 +17,6 @@ const readyWhere: Prisma.OrderItemWhereInput = {
 
 interface PageProps {
   searchParams: Promise<{ from?: string; to?: string; status?: string; page?: string }>
-}
-
-// 주문일 범위는 한국 시간 기준이며 종료일도 포함합니다.
-function koreanDate(value?: string): Date | null {
-  if (!value || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return null
-  const parsed = new Date(`${value}T00:00:00+09:00`)
-  return Number.isNaN(parsed.getTime()) || new Date(parsed.getTime() + 9 * 60 * 60 * 1000).toISOString().slice(0, 10) !== value
-    ? null : parsed
 }
 
 function itemStatus(item: { shippedAt: Date | null; deliveredAt: Date | null; order: { status: string } }) {
@@ -42,18 +35,16 @@ export default async function AdminShippingPage({ searchParams }: PageProps) {
   if (!await adminAuth()) redirect('/')
 
   const params = await searchParams
-  const today = new Date(Date.now() + 9 * 60 * 60 * 1000).toISOString().slice(0, 10)
-  const fromValue = koreanDate(params.from) ? params.from! : today
-  const toValue = koreanDate(params.to) ? params.to! : today
-  const from = koreanDate(fromValue)!
-  const to = koreanDate(toValue)!
+  // 기본 조회기간: 7일 전 ~ 오늘 (한국시간, 종료일 포함)
+  const range = kstDateRange(params.from, params.to)
+  const { fromValue, toValue } = range
   const status = params.status === 'all' ? 'all' : 'ready'
   const parsedPage = Number(params.page)
   const page = Number.isSafeInteger(parsedPage) && parsedPage > 0 ? parsedPage : 1
   const where: Prisma.OrderItemWhereInput = status === 'ready' ? { ...readyWhere } : {}
   where.order = {
     ...(status === 'ready' ? { status: { in: ['PAYMENT_CONFIRMED', 'SHIPPING'] as const } } : {}),
-    createdAt: { gte: from, lt: new Date(to.getTime() + 24 * 60 * 60 * 1000) },
+    createdAt: { gte: range.gte, lt: range.lt },
   }
 
   const [pendingCount, total, items] = await Promise.all([

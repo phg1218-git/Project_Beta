@@ -9,6 +9,7 @@ import { formatPrice } from '@/lib/utils'
 import { Prisma } from '@prisma/client'
 import { PageHeader } from '@/components/PageHeader'
 import { displayOrderNumber } from '@/lib/order-number'
+import { kstDateRange, type KstDateRange } from '@/lib/date-range'
 
 export const dynamic = 'force-dynamic'
 
@@ -21,8 +22,7 @@ interface PageProps {
 async function getOrders(
   userId: string,
   status: string,
-  from: string,
-  to: string,
+  range: KstDateRange,
   page: number,
 ) {
   try {
@@ -30,14 +30,7 @@ async function getOrders(
     if (status && status !== 'all') {
       where.status = status as Prisma.EnumOrderStatusFilter
     }
-    if (from) {
-      where.createdAt = { ...((where.createdAt as object) ?? {}), gte: new Date(from) }
-    }
-    if (to) {
-      const toDate = new Date(to)
-      toDate.setHours(23, 59, 59, 999)
-      where.createdAt = { ...((where.createdAt as object) ?? {}), lte: toDate }
-    }
+    where.createdAt = { gte: range.gte, lt: range.lt }
     const [orders, total] = await Promise.all([
       prisma.order.findMany({
         where,
@@ -71,11 +64,13 @@ export default async function OrdersPage({ searchParams }: PageProps) {
 
   const params = await searchParams
   const status = params.status ?? 'all'
-  const from = params.from ?? ''
-  const to = params.to ?? ''
+  // 기본 조회기간: 7일 전 ~ 오늘 (한국시간)
+  const range = kstDateRange(params.from, params.to)
+  const from = range.fromValue
+  const to = range.toValue
   const page = Math.max(1, parseInt(params.page ?? '1', 10) || 1)
 
-  const { orders, total } = await getOrders(session.user.id, status, from, to, page)
+  const { orders, total } = await getOrders(session.user.id, status, range, page)
   const settings = await getStoreSettingsForDisplay()
   const currentAccount = settings.bankAccount || process.env.BANK_ACCOUNT_INFO || ''
   const pendingAccounts = Array.from(new Set(orders
@@ -145,6 +140,7 @@ export default async function OrdersPage({ searchParams }: PageProps) {
         <input
           type="date"
           name="from"
+          key={from}
           defaultValue={from}
           className="px-2 py-1.5 text-xs border border-gray-200 rounded-lg"
         />
@@ -152,6 +148,7 @@ export default async function OrdersPage({ searchParams }: PageProps) {
         <input
           type="date"
           name="to"
+          key={to}
           defaultValue={to}
           className="px-2 py-1.5 text-xs border border-gray-200 rounded-lg"
         />
@@ -170,9 +167,7 @@ export default async function OrdersPage({ searchParams }: PageProps) {
           <div className="text-center py-16">
             <div className="text-5xl mb-4">📦</div>
             <p className="text-gray-500">
-              {status !== 'all' || from || to
-                ? '해당 조건의 주문이 없어요.'
-                : '아직 주문 내역이 없어요.\n첫 주문을 해보세요!'}
+              {`${from} ~ ${to} 기간에 ${status !== 'all' ? '해당 상태의 ' : ''}주문이 없어요.`}
             </p>
             <Link
               href="/products"
