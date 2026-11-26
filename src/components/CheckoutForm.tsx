@@ -401,6 +401,9 @@ export function CheckoutForm({ directItem }: { directItem?: CartItem }) {
       {/* 페이지 헤더 */}
       <PageHeader title={isDirect ? '주문하기' : '장바구니'} description={`${items.length}개 상품`} />
 
+      <div className="px-4 py-3"><BankAccountInfo account={bankAccount} /></div>
+
+
       {/* 선택/삭제 액션바 */}
       {!isDirect && <div className="px-4 py-3 bg-gray-50 border-b border-gray-200 flex items-center justify-between">
         <label className="flex items-center gap-2 cursor-pointer">
@@ -542,7 +545,6 @@ export function CheckoutForm({ directItem }: { directItem?: CartItem }) {
         <Link href="/support" className="inline-block underline text-gray-600">배송·교환·고객 안내</Link>
       </div>
 
-      <div className="px-4 mb-4"><BankAccountInfo account={bankAccount} /></div>
 
       {/* 하단 결제바 */}
       <div className="fixed bottom-[calc(64px+env(safe-area-inset-bottom))] app-fixed-x bg-white border-t border-gray-200 px-4 py-3 z-[150] shadow-lg">

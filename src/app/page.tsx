@@ -37,6 +37,7 @@ export default async function HomePage() {
         >
           지금 주문하기 →
         </Link>
+        <div className="mt-4 w-full max-w-md text-left"><BankAccountInfo account={bankAccount || ''} /></div>
       </section>
 
       {/* 만생귤 소개 */}
@@ -107,8 +108,6 @@ export default async function HomePage() {
           상품 둘러보기
         </Link>
       </section>
-
-      <section className="px-6 py-6"><BankAccountInfo account={bankAccount || ''} /></section>
 
       {/* Footer */}
       <footer className="py-8 px-6 bg-gray-900 text-gray-400 text-center text-xs leading-relaxed">

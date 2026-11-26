@@ -1,3 +1,5 @@
+import { BankAccountInfo } from '@/components/BankAccountInfo'
+import { getStoreSettingsForDisplay } from '@/lib/store-settings'
 import { auth } from '@/auth'
 import { prisma } from '@/lib/prisma'
 import { redirect } from 'next/navigation'
@@ -9,7 +11,6 @@ import { PageHeader } from '@/components/PageHeader'
 
 export const dynamic = 'force-dynamic'
 
-const BANK_ACCOUNT_INFO = process.env.BANK_ACCOUNT_INFO || '고객센터에 문의해주세요.'
 const PAGE_SIZE = 20
 
 interface PageProps {
@@ -74,6 +75,13 @@ export default async function OrdersPage({ searchParams }: PageProps) {
   const page = Math.max(1, parseInt(params.page ?? '1', 10) || 1)
 
   const { orders, total } = await getOrders(session.user.id, status, from, to, page)
+  const settings = await getStoreSettingsForDisplay()
+  const currentAccount = settings.bankAccount || process.env.BANK_ACCOUNT_INFO || ''
+  const pendingAccounts = Array.from(new Set(orders
+    .filter((order) => order.status === 'DRAFT')
+    .map((order) => order.bankAccountSnapshot || currentAccount)
+    .filter(Boolean)))
+  const accounts = pendingAccounts.length ? pendingAccounts : [currentAccount]
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE))
 
   const buildHref = (overrides: Record<string, string>) => {
@@ -105,12 +113,9 @@ export default async function OrdersPage({ searchParams }: PageProps) {
       <PageHeader title="주문 내역" description="최근 주문을 확인하세요" />
 
       {/* 계좌 정보 안내 */}
-      <div className="px-4 py-4 bg-gradient-to-r from-orange-50 to-yellow-50 border-b border-orange-200">
-        <div className="bg-white rounded-xl p-4 shadow-sm border border-orange-100">
-          <p className="text-center text-xs text-orange-600 font-semibold mb-1">💳 입금 계좌 안내</p>
-          <p className="text-center text-base font-bold text-gray-900">{BANK_ACCOUNT_INFO}</p>
-          <p className="text-center text-xs text-gray-500 mt-1">예금주: 오늘의귤</p>
-        </div>
+      <div className="px-4 py-3 space-y-2">
+        {accounts.map((account) => <BankAccountInfo key={account} account={account} />)}
+        <p className="text-xs text-gray-500">입금 전 주문 상세에서 해당 주문의 계좌와 금액을 확인해주세요.</p>
       </div>
 
       {/* 상태 필터 탭 */}
