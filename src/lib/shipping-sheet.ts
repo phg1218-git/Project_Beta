@@ -35,11 +35,8 @@ export async function buildShippingWorkbook(rows: ShippingSheetRow[]): Promise<B
   const book = new ExcelJS.Workbook()
   book.creator = '오늘의귤'
   const list = book.addWorksheet('배송목록', { views: [{ state: 'frozen', ySplit: 1 }] })
+  // 배송목록은 택배 접수에 필요한 열만 둔다. 주문번호·배송상품ID는 송장입력 시트에 있다.
   list.columns = [
-    { header: '주문번호', key: 'orderId', width: 32 },
-    { header: '배송상품ID', key: 'itemId', width: 32 },
-    { header: '주문일(KST)', key: 'orderedAt', width: 20 },
-    { header: '주문자', key: 'buyerName', width: 16 },
     { header: '입금자', key: 'depositorName', width: 16 },
     { header: '상품', key: 'productName', width: 32 },
     { header: '수량', key: 'quantity', width: 9 },
@@ -48,7 +45,7 @@ export async function buildShippingWorkbook(rows: ShippingSheetRow[]): Promise<B
     { header: '기본주소', key: 'addressBase', width: 48 },
     { header: '상세주소', key: 'addressDetail', width: 28 },
   ]
-  list.autoFilter = { from: 'A1', to: 'K1' }
+  list.autoFilter = { from: 'A1', to: 'G1' }
   list.getColumn('recipientPhone').numFmt = '@'
 
   const input = book.addWorksheet('송장입력', { views: [{ state: 'frozen', ySplit: 1 }] })
@@ -65,8 +62,13 @@ export async function buildShippingWorkbook(rows: ShippingSheetRow[]): Promise<B
 
   for (const row of rows) {
     list.addRow({
-      ...row,
-      orderedAt: new Date(row.orderedAt.getTime() + 9 * 60 * 60 * 1000).toISOString().slice(0, 16).replace('T', ' '),
+      depositorName: row.depositorName,
+      productName: row.productName,
+      quantity: row.quantity,
+      recipientName: row.recipientName,
+      recipientPhone: row.recipientPhone,
+      addressBase: row.addressBase,
+      addressDetail: row.addressDetail,
     })
     input.addRow({
       orderId: row.orderId,

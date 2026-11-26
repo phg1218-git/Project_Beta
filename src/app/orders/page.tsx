@@ -8,6 +8,7 @@ import { OrderStatusBadge } from '@/components/OrderStatusBadge'
 import { formatPrice } from '@/lib/utils'
 import { Prisma } from '@prisma/client'
 import { PageHeader } from '@/components/PageHeader'
+import { displayOrderNumber } from '@/lib/order-number'
 
 export const dynamic = 'force-dynamic'
 
@@ -197,7 +198,7 @@ export default async function OrdersPage({ searchParams }: PageProps) {
                         })}
                       </p>
                       <p className="text-xs text-gray-400 mt-0.5">
-                        주문번호: {order.id.slice(-8).toUpperCase()}
+                        주문번호: {displayOrderNumber(order)}
                       </p>
                     </div>
                     <OrderStatusBadge status={order.status} />

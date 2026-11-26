@@ -4,6 +4,7 @@ import { NextResponse } from 'next/server'
 import { Prisma } from '@prisma/client'
 import { orderRequestId, samePurchase } from '@/lib/order-request'
 import { getStoreSettings } from '@/lib/store-settings'
+import { allocateOrderNumber } from '@/lib/order-number'
 
 interface OrderItemInput {
   productId: string
@@ -212,9 +213,11 @@ export async function POST(req: Request) {
       }
 
       // 3. 주문 생성
+      const orderNumber = await allocateOrderNumber(tx)
       const newOrder = await tx.order.create({
         data: {
           ...(requestId && { id: requestId }),
+          orderNumber,
           userId: session.user.id,
           totalAmount,
           shippingFee: settings.shippingFee,

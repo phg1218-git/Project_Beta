@@ -7,6 +7,7 @@ import { OrderStatusBadge } from '@/components/OrderStatusBadge'
 import { AdminOrderActions } from '@/components/AdminOrderActions'
 import { Prisma } from '@prisma/client'
 import { readRefund } from '@/lib/admin-cancel'
+import { displayOrderNumber } from '@/lib/order-number'
 
 export const dynamic = 'force-dynamic'
 
@@ -36,6 +37,7 @@ async function getOrders(status: string, q: string, page: number) {
     if (q) {
       where.OR = [
         { id: { contains: q, mode: 'insensitive' } },
+        { orderNumber: { contains: q, mode: 'insensitive' } },
         { depositorName: { contains: q, mode: 'insensitive' } },
         { user: { name: { contains: q, mode: 'insensitive' } } },
         { user: { email: { contains: q, mode: 'insensitive' } } },
@@ -197,7 +199,7 @@ export default async function AdminOrdersPage({ searchParams }: PageProps) {
                   <tr key={order.id} className="hover:bg-gray-50">
                     <td className="px-4 py-3">
                       <span className="text-sm font-mono text-gray-900">
-                        {order.id.slice(-8).toUpperCase()}
+                        {displayOrderNumber(order)}
                       </span>
                     </td>
                     <td className="px-4 py-3">

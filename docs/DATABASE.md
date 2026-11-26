@@ -6,7 +6,14 @@
   - 이전에는 schema에 `Order.shippingFee`, `StoreSettings`가 없어 `db push` 시 **운영 컬럼/테이블이 삭제될 수 있었음** (Codex 브랜치가 SQL 패치로 DB에 추가한 객체).
 - `prisma/migrations/0_init/migration.sql`: 현재 schema 전체를 만드는 baseline. 운영 DB에는 아직 "적용됨" 표시를 하지 않았음.
 
-## 운영 DB baseline 등록 (배포 직전, 1회)
+## 2026-11-26 운영 적용 기록
+
+- 운영 DB(`neondb`)가 `0_init`과 동일함을 `migrate diff`로 확인한 뒤 `migrate resolve --applied 0_init`으로 baseline을 등록했다.
+- 이어서 `migrate deploy`로 `20261126000000_order_season_number`(시즌 주문번호)를 적용했다. 기존 주문 13건에 `2026-1`~`2026-13`을 부여했다.
+- 이 PC에는 `.env.local`/`.env.test.local`이 없고 `.env`의 `DATABASE_URL`이 운영 DB다. 테스트 DB는 같은 서버의 `project_beta_integration`.
+- **`migrate diff`의 `--shadow-database-url`에 운영 주소를 절대 넣지 않는다** (shadow DB는 초기화된다).
+
+## 운영 DB baseline 등록 (완료됨, 새 환경 참고용)
 
 운영 DB는 이미 모든 테이블이 있으므로 SQL을 실행하지 않고 이력만 등록한다.
 Prisma CLI는 `.env.local`을 읽지 않으므로 해당 셸에서 `$env:DATABASE_URL`을 운영 주소로 지정한 뒤 실행한다(주소를 출력·기록하지 말 것).

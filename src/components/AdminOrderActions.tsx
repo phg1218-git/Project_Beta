@@ -17,6 +17,7 @@ interface OrderItem {
 
 interface Order {
   id: string
+  orderNumber?: string | null
   status: string
   totalAmount: number
   paidAt?: Date | string | null

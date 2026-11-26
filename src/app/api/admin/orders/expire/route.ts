@@ -24,6 +24,7 @@ async function requireAdmin() {
 
 const listSelect = {
   id: true,
+  orderNumber: true,
   status: true,
   totalAmount: true,
   depositorName: true,

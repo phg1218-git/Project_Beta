@@ -23,8 +23,9 @@ test('배송 엑셀에 수령 정보와 입력 시트를 만들고 운송장 앞
   await workbook.xlsx.load(buffer as unknown as Parameters<typeof workbook.xlsx.load>[0])
   const list = workbook.getWorksheet('배송목록')!
   const input = workbook.getWorksheet('송장입력')!
-  assert.equal(list.getCell('I2').value, '010-0123-4567')
-  assert.equal(list.getCell('C2').value, '2026-10-29 08:00')
+  assert.deepEqual((list.getRow(1).values as unknown[]).slice(1),
+    ['입금자', '상품', '수량', '수령인', '전화번호', '기본주소', '상세주소'])
+  assert.equal(list.getCell('E2').value, '010-0123-4567')
   assert.equal(input.getCell('C2').value, 'CJ대한통운')
   assert.equal(input.getCell('D2').numFmt, '@')
   input.getCell('D2').value = '001234567890'

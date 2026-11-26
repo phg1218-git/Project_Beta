@@ -3,10 +3,12 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { formatPrice } from '@/lib/utils'
+import { displayOrderNumber } from '@/lib/order-number'
 
 interface Props {
   order: {
     id: string
+    orderNumber?: string | null
     status: string
     totalAmount: number
     paidAt?: Date | string | null
@@ -85,7 +87,7 @@ export function AdminCancelRefund({ order }: Props) {
           <div className="absolute inset-0 bg-black/50" onClick={() => !busy && setMode(null)} />
           <div role="dialog" aria-modal="true" aria-labelledby={`cr-${order.id}`} className="relative bg-white rounded-xl p-6 w-full max-w-md mx-4 max-h-[90vh] overflow-y-auto space-y-4">
             <h3 id={`cr-${order.id}`} className="text-lg font-bold">
-              {mode === 'cancel' ? '주문 취소' : '환불 완료 기록'} · {order.id.slice(-8).toUpperCase()}
+              {mode === 'cancel' ? '주문 취소' : '환불 완료 기록'} · {displayOrderNumber(order)}
             </h3>
 
             {mode === 'cancel' ? (

@@ -8,6 +8,7 @@ import { OrderActions } from '@/components/OrderActions'
 import { ShippingInfo } from '@/components/ShippingInfo'
 import { PageHeader } from '@/components/PageHeader'
 import { readRefund, refundLogWhere } from '@/lib/admin-cancel'
+import { displayOrderNumber } from '@/lib/order-number'
 
 export const dynamic = 'force-dynamic'
 
@@ -59,7 +60,7 @@ export default async function OrderDetailPage({ params }: PageProps) {
   return (
     <div className="page-enter">
       {/* 페이지 헤더 */}
-      <PageHeader title="주문 상세" description={`주문번호: ${order.id.slice(-8).toUpperCase()}`} />
+      <PageHeader title="주문 상세" description={`주문번호: ${displayOrderNumber(order)}`} />
 
       {/* 계좌 정보 안내 - DRAFT 상태일 때만 표시 */}
       {order.status === 'DRAFT' && (

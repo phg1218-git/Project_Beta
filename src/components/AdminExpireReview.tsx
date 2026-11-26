@@ -2,9 +2,11 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
+import { displayOrderNumber } from '@/lib/order-number'
 
 interface CandidateOrder {
   id: string
+  orderNumber: string | null
   status: 'DRAFT' | 'DEPOSIT_REQUESTED'
   totalAmount: number
   depositorName: string | null
@@ -34,7 +36,7 @@ function OrderLine({ order, time }: { order: CandidateOrder; time: string }) {
     <div className="min-w-0 flex-1">
       <p className="text-sm text-gray-900 truncate">
         <Link href={`/admin/orders?q=${encodeURIComponent(order.id)}`} className="font-mono text-xs text-orange-600 hover:underline">
-          {order.id.slice(-8)}
+          {displayOrderNumber(order)}
         </Link>{' '}
         {order.user.name ?? order.user.email ?? '-'} · 입금자 {order.depositorName ?? '-'}
       </p>

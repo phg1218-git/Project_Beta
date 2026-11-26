@@ -6,7 +6,7 @@ import { useState, useEffect, useRef } from 'react'
 import { usePathname, useRouter } from 'next/navigation'
 
 export function OrangeTopHeader() {
-  const { data: session, status } = useSession()
+  const { data: session, status, update } = useSession()
   const pathname = usePathname()
   const router = useRouter()
   // 사이트 안에서 이동한 횟수 — 링크로 바로 들어온 경우 뒤로가기가 사이트를 벗어나지 않도록
@@ -115,7 +115,11 @@ export function OrangeTopHeader() {
 
               <div className="relative">
                 <button
-                  onClick={() => setShowMenu(!showMenu)}
+                  onClick={() => {
+                    // 메뉴를 열 때 서버의 현재 권한을 다시 읽어 새로 지정된 관리자도 바로 보이게 한다.
+                    if (!showMenu) void update()
+                    setShowMenu(!showMenu)
+                  }}
                   className="w-10 h-10 flex items-center justify-center rounded-full bg-orange-100 hover:bg-orange-200 transition-colors"
                   aria-label="프로필 메뉴"
                 >

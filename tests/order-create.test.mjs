@@ -8,6 +8,7 @@ function harness({ uniqueConflict = false, shippingFee = 0 } = {}) {
   let stock = 10
   const orders = new Map()
   let deleted = 0
+  let orderSeq = 0
   const findUnique = async ({ where }) => orders.get(where.id) || null
   const tx = {
     order: {
@@ -28,6 +29,8 @@ function harness({ uniqueConflict = false, shippingFee = 0 } = {}) {
       updateMany: async ({ data }) => { stock -= data.stock.decrement; return { count: 1 } },
     },
     cartItem: { deleteMany: async () => { deleted++ } },
+    orderSeason: { aggregate: async () => ({ _max: { season: null } }) },
+    $queryRaw: async () => [{ lastNumber: ++orderSeq }],
   }
   const prisma = {
     user: { findUnique: async () => ({ id: 'user', name: '구매자', profileComplete: true, shippingAddresses: [address] }) },
@@ -53,6 +56,8 @@ test('주문 응답 유실 후 같은 키로 재시도하면 기존 주문 반�
   const first = await (await h.send()).json()
   const second = await (await h.send()).json()
   assert.equal(first.id, second.id)
+  assert.match(first.orderNumber, /^\d{4}-1$/)
+  assert.equal(second.orderNumber, first.orderNumber)
   assert.deepEqual(h.stats(), { stock: 8, orders: 1, deleted: 1 })
 })
 

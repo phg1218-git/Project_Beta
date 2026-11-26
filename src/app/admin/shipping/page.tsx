@@ -4,6 +4,7 @@ import { redirect } from 'next/navigation'
 import { adminAuth } from '@/lib/admin-auth'
 import { prisma } from '@/lib/prisma'
 import { ShippingWorkbookManager } from '@/components/ShippingWorkbookManager'
+import { displayOrderNumber } from '@/lib/order-number'
 
 export const dynamic = 'force-dynamic'
 
@@ -65,7 +66,7 @@ export default async function AdminShippingPage({ searchParams }: PageProps) {
         recipientAddressBase: true, recipientAddressDetail: true, trackingNumber: true,
         shippedAt: true, deliveredAt: true,
         product: { select: { name: true } },
-        order: { select: { id: true, createdAt: true, status: true } },
+        order: { select: { id: true, orderNumber: true, createdAt: true, status: true } },
       },
       orderBy: [{ order: { createdAt: 'desc' } }, { id: 'desc' }],
       skip: (page - 1) * PAGE_SIZE,
@@ -135,7 +136,7 @@ export default async function AdminShippingPage({ searchParams }: PageProps) {
                 {items.map((item) => (
                   <tr key={item.id}>
                     <td className="px-3 py-3 whitespace-nowrap">{item.order.createdAt.toLocaleDateString('ko-KR', { timeZone: 'Asia/Seoul' })}</td>
-                    <td className="px-3 py-3 whitespace-nowrap font-mono text-xs">{item.order.id.slice(-8).toUpperCase()}</td>
+                    <td className="px-3 py-3 whitespace-nowrap font-mono text-xs">{displayOrderNumber(item.order)}</td>
                     <td className="px-3 py-3 min-w-40">{item.product.name}</td>
                     <td className="px-3 py-3 whitespace-nowrap">{item.recipientName}</td>
                     <td className="px-3 py-3 whitespace-nowrap">{item.recipientPhone}</td>
