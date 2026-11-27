@@ -12,7 +12,7 @@ const sample = {
   productName: '감귤 5kg',
   quantity: 2,
   recipientName: '수령인',
-  recipientPhone: '010-0123-4567',
+  recipientPhone: '01001234567',
   addressBase: '제주시 조천읍',
   addressDetail: '101호',
   adminMemo: '문 앞에 놓아주세요',
@@ -25,9 +25,9 @@ test('배송 엑셀에 수령 정보와 입력 시트를 만들고 운송장 앞
   const list = workbook.getWorksheet('배송목록')!
   const input = workbook.getWorksheet('송장입력')!
   assert.deepEqual((list.getRow(1).values as unknown[]).slice(1),
-    ['입금자', '상품', '수량', '수령인', '전화번호', '기본주소', '상세주소', '관리자 메모'])
-  assert.equal(list.getCell('E2').value, '010-0123-4567')
-  assert.equal(list.getCell('H2').value, sample.adminMemo)
+    ['수령인', '수량', '전화번호', '주소', '상세주소', '관리자 메모'])
+  assert.equal(list.getCell('C2').value, '010-0123-4567')
+  assert.equal(list.getCell('F2').value, sample.adminMemo)
   assert.equal(input.getCell('C2').value, 'CJ대한통운')
   assert.equal(input.getCell('D2').numFmt, '@')
   input.getCell('D2').value = '001234567890'

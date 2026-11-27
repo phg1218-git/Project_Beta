@@ -1,4 +1,5 @@
 import ExcelJS from 'exceljs'
+import { formatPhoneNumber } from './utils'
 
 export const MAX_SHIPPING_ROWS = 1000
 export const MAX_SHIPPING_FILE_BYTES = 2 * 1024 * 1024
@@ -38,16 +39,14 @@ export async function buildShippingWorkbook(rows: ShippingSheetRow[]): Promise<B
   const list = book.addWorksheet('배송목록', { views: [{ state: 'frozen', ySplit: 1 }] })
   // 배송목록은 택배 접수에 필요한 열만 둔다. 주문번호·배송상품ID는 송장입력 시트에 있다.
   list.columns = [
-    { header: '입금자', key: 'depositorName', width: 16 },
-    { header: '상품', key: 'productName', width: 32 },
-    { header: '수량', key: 'quantity', width: 9 },
     { header: '수령인', key: 'recipientName', width: 16 },
+    { header: '수량', key: 'quantity', width: 9 },
     { header: '전화번호', key: 'recipientPhone', width: 20 },
-    { header: '기본주소', key: 'addressBase', width: 48 },
+    { header: '주소', key: 'addressBase', width: 48 },
     { header: '상세주소', key: 'addressDetail', width: 28 },
     { header: '관리자 메모', key: 'adminMemo', width: 40 },
   ]
-  list.autoFilter = { from: 'A1', to: 'H1' }
+  list.autoFilter = { from: 'A1', to: 'F1' }
   list.getColumn('recipientPhone').numFmt = '@'
 
   const input = book.addWorksheet('송장입력', { views: [{ state: 'frozen', ySplit: 1 }] })
@@ -64,11 +63,9 @@ export async function buildShippingWorkbook(rows: ShippingSheetRow[]): Promise<B
 
   for (const row of rows) {
     list.addRow({
-      depositorName: row.depositorName,
-      productName: row.productName,
-      quantity: row.quantity,
       recipientName: row.recipientName,
-      recipientPhone: row.recipientPhone,
+      quantity: row.quantity,
+      recipientPhone: formatPhoneNumber(row.recipientPhone),
       addressBase: row.addressBase,
       addressDetail: row.addressDetail,
       adminMemo: row.adminMemo || '',
