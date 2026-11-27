@@ -361,7 +361,7 @@ export default function ShippingAddressPage() {
           />
 
           {/* 모달 내용 */}
-          <div className="relative w-full max-w-[var(--app-max)] bg-white rounded-t-3xl max-h-[90vh] overflow-y-auto">
+          <div className="relative w-full max-w-[var(--app-max)] bg-white rounded-t-3xl max-h-[calc(100dvh-5rem)] overflow-y-auto overscroll-contain">
             {/* 모달 헤더 */}
             <div className="sticky top-0 bg-white px-5 py-4 border-b border-gray-100 flex items-center justify-between">
               <h2 className="text-lg font-bold">
@@ -376,7 +376,7 @@ export default function ShippingAddressPage() {
             </div>
 
             {/* 모달 폼 */}
-            <form onSubmit={handleSubmit} className="px-5 py-6">
+            <form onSubmit={handleSubmit} className="px-5 pt-6 pb-[calc(6rem+env(safe-area-inset-bottom))]">
               {errors.general && (
                 <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-xl">
                   <p className="text-sm text-red-600">{errors.general}</p>

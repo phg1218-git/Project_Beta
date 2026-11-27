@@ -15,6 +15,7 @@ export interface ShippingSheetRow {
   recipientPhone: string
   addressBase: string
   addressDetail: string
+  adminMemo?: string
 }
 
 export interface TrackingEntry {
@@ -44,8 +45,9 @@ export async function buildShippingWorkbook(rows: ShippingSheetRow[]): Promise<B
     { header: '전화번호', key: 'recipientPhone', width: 20 },
     { header: '기본주소', key: 'addressBase', width: 48 },
     { header: '상세주소', key: 'addressDetail', width: 28 },
+    { header: '관리자 메모', key: 'adminMemo', width: 40 },
   ]
-  list.autoFilter = { from: 'A1', to: 'G1' }
+  list.autoFilter = { from: 'A1', to: 'H1' }
   list.getColumn('recipientPhone').numFmt = '@'
 
   const input = book.addWorksheet('송장입력', { views: [{ state: 'frozen', ySplit: 1 }] })
@@ -69,6 +71,7 @@ export async function buildShippingWorkbook(rows: ShippingSheetRow[]): Promise<B
       recipientPhone: row.recipientPhone,
       addressBase: row.addressBase,
       addressDetail: row.addressDetail,
+      adminMemo: row.adminMemo || '',
     })
     input.addRow({
       orderId: row.orderId,

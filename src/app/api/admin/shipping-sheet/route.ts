@@ -22,7 +22,7 @@ export async function GET() {
         product: { select: { name: true } },
         order: {
           select: {
-            id: true, createdAt: true, depositorName: true,
+            id: true, createdAt: true, depositorName: true, adminMemo: true,
             user: { select: { name: true } },
           },
         },
@@ -45,6 +45,7 @@ export async function GET() {
       recipientPhone: item.recipientPhone,
       addressBase: item.recipientAddressBase,
       addressDetail: item.recipientAddressDetail || '',
+      adminMemo: item.order.adminMemo || '',
     })))
     const date = new Date(Date.now() + 9 * 60 * 60 * 1000).toISOString().slice(0, 10).replace(/-/g, '')
     return new NextResponse(new Uint8Array(buffer), {

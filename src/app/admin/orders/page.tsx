@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { formatPrice } from '@/lib/utils'
 import { OrderStatusBadge } from '@/components/OrderStatusBadge'
 import { AdminOrderActions } from '@/components/AdminOrderActions'
+import { AdminOrderMemo } from '@/components/AdminOrderMemo'
 import { Prisma } from '@prisma/client'
 import { readRefund } from '@/lib/admin-cancel'
 import { displayOrderNumber } from '@/lib/order-number'
@@ -247,6 +248,7 @@ export default async function AdminOrdersPage({ searchParams }: PageProps) {
                     </td>
                     <td className="px-4 py-3">
                       <AdminOrderActions order={{ ...order, refunded: refunds.has(order.id) }} />
+                      <AdminOrderMemo orderId={order.id} initialMemo={order.adminMemo} />
                     </td>
                   </tr>
                 ))}

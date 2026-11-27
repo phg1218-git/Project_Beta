@@ -114,6 +114,7 @@ model Order {
   status              OrderStatus     @default(DRAFT)
   totalAmount         Int
   shippingFee         Int             @default(0)
+  adminMemo           String?         @db.Text
   depositorName       String?
   bankAccountSnapshot String?
   requestedDepositAt  DateTime?
