@@ -41,7 +41,7 @@ export async function withdrawUser(
     throw new WithdrawBlockedError('ACTIVE_ORDERS')
   }
   const paidCanceled = await tx.order.findMany({
-    where: { userId, status: 'CANCELED', paidAt: { not: null } },
+    where: { userId, status: 'CANCELED', paidAt: { not: null }, totalAmount: { gt: 0 } },
     select: { id: true },
   })
   if (paidCanceled.length) {

@@ -34,7 +34,7 @@ export function AdminCancelRefund({ order }: Props) {
   const unpaid = UNPAID.includes(order.status)
   const shipped = SHIPPED.includes(order.status)
   const canCancel = order.status !== 'CANCELED'
-  const needsRefund = order.status === 'CANCELED' && !!order.paidAt && !order.refunded
+  const needsRefund = order.status === 'CANCELED' && order.totalAmount > 0 && !!order.paidAt && !order.refunded
 
   if (!canCancel && !needsRefund) return null
 
@@ -66,7 +66,9 @@ export function AdminCancelRefund({ order }: Props) {
 
   const confirmLabel = mode === 'refund'
     ? `고객 계좌로 ${formatPrice(amount || 0)}을 실제로 송금했습니다.`
-    : unpaid
+    : order.totalAmount === 0
+      ? '결제금액이 0원인 주문을 취소합니다. 환불은 필요하지 않습니다.'
+      : unpaid
       ? '계좌 입금 내역을 확인했고, 이 주문의 입금이 없습니다.'
       : `입금된 ${formatPrice(order.totalAmount)}의 환불이 필요한 취소임을 확인했습니다.`
   const ready = confirmed && !busy && (mode === 'refund'
@@ -93,7 +95,9 @@ export function AdminCancelRefund({ order }: Props) {
             {mode === 'cancel' ? (
               <>
                 <p className="text-sm text-gray-600">
-                  {unpaid
+                  {order.totalAmount === 0
+                    ? '증정 주문을 취소합니다. 환불은 필요하지 않습니다.'
+                    : unpaid
                     ? '미입금 주문을 취소하고 재고를 되돌립니다. 입금이 있었다면 먼저 입금완료 처리한 뒤 취소해주세요.'
                     : shipped
                       ? '발송된 주문을 취소합니다. 환불이 필요한 주문으로 표시되며, 회수한 상품을 다시 팔 수 있을 때만 재고를 되돌리세요.'

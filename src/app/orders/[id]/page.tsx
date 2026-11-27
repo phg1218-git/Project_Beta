@@ -47,7 +47,7 @@ export default async function OrderDetailPage({ params }: PageProps) {
   }
 
   // 입금 후 취소된 주문은 환불 기록 여부를 함께 안내 (금액만 표시, 관리자 메모는 숨김)
-  const refund = order.status === 'CANCELED' && order.paidAt
+  const refund = order.status === 'CANCELED' && order.totalAmount > 0 && order.paidAt
     ? readRefund(await prisma.adminActionLog.findFirst({
         where: refundLogWhere(order.id),
         select: { adminId: true, afterJson: true, createdAt: true },
@@ -136,7 +136,7 @@ export default async function OrderDetailPage({ params }: PageProps) {
                 ❌ 취소된 주문입니다.
               </p>
               {order.cancelReason && <p className="mt-1 text-xs text-red-700">사유: {order.cancelReason}</p>}
-              {order.paidAt && (
+              {order.totalAmount > 0 && order.paidAt && (
                 <p className="mt-1 text-xs text-red-700">
                   {refund
                     ? `${formatPrice(refund.amount)} 환불 완료 (${new Date(refund.refundedAt).toLocaleDateString('ko-KR', { timeZone: 'Asia/Seoul' })})`
@@ -154,6 +154,12 @@ export default async function OrderDetailPage({ params }: PageProps) {
           <h2 className="font-bold text-gray-900 mb-3">🚚 배송 정보</h2>
           <ShippingInfo orderId={order.id} orderItems={order.items} />
         </div>
+      )}
+
+      {order.paymentRequest?.note === '관리자 증정처리 (실제 입금 없음)' && (
+        <p className="mx-4 my-3 rounded-xl bg-purple-50 p-4 text-sm text-purple-700">
+          관리자 증정 주문입니다. 상품과 배송비가 무료로 제공됩니다.
+        </p>
       )}
 
       {/* 주문 상품 */}

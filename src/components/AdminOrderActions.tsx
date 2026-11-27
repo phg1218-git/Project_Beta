@@ -88,6 +88,24 @@ export function AdminOrderActions({ order }: { order: Order }) {
     })
   }
 
+  const handleComplimentary = () => {
+    requestConfirm('배송비를 포함한 결제금액을 0원으로 변경하고 증정처리하시겠습니까? 실제 입금 없이 배송 준비 단계로 전환됩니다.', async () => {
+      setActionState({ type: 'loading' })
+      try {
+        const res = await fetch(`/api/admin/orders/${order.id}/complimentary`, { method: 'POST' })
+        if (res.ok) {
+          showSuccess('관리자 증정처리가 완료되었습니다.')
+          router.refresh()
+        } else {
+          const data = await res.json()
+          showError(data.error || '증정처리에 실패했습니다.')
+        }
+      } catch {
+        showError('네트워크 오류가 발생했습니다.')
+      }
+    })
+  }
+
   const handleShip = async () => {
     let body: unknown
 
@@ -192,7 +210,7 @@ export function AdminOrderActions({ order }: { order: Order }) {
 
       {/* 액션 버튼 */}
       {actionState.type !== 'confirm' && (
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           {['DRAFT', 'DEPOSIT_REQUESTED'].includes(order.status) && (
             <button
               onClick={handleConfirmPayment}
@@ -200,6 +218,16 @@ export function AdminOrderActions({ order }: { order: Order }) {
               className="px-3 py-1.5 text-xs font-semibold text-white bg-blue-500 rounded-lg hover:bg-blue-600 disabled:opacity-50"
             >
               {isLoading ? '처리 중...' : order.status === 'DRAFT' ? '직접 입금완료 처리' : '입금완료 처리'}
+            </button>
+          )}
+
+          {['DRAFT', 'DEPOSIT_REQUESTED'].includes(order.status) && (
+            <button
+              onClick={handleComplimentary}
+              disabled={isLoading}
+              className="px-3 py-1.5 text-xs font-semibold text-purple-700 bg-purple-50 rounded-lg hover:bg-purple-100 disabled:opacity-50"
+            >
+              관리자 증정처리
             </button>
           )}
 

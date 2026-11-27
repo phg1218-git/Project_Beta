@@ -66,7 +66,7 @@ export async function adminCancelOrder(
   if (!canAdminCancel(order.status)) throw new Error('INVALID_CANCEL_STATUS')
   const now = new Date()
   const restock = restockDecision(order.status, input.restock)
-  const refundRequired = isPaidStatus(order.status)
+  const refundRequired = isPaidStatus(order.status) && order.totalAmount > 0
   await tx.order.update({
     where: { id: order.id, status: order.status },
     data: { status: 'CANCELED', canceledAt: now, cancelReason: `관리자 취소 — ${input.reason}` },
@@ -132,7 +132,7 @@ export async function recordRefund(
     SELECT status, "paidAt", "totalAmount" FROM "Order" WHERE id = ${orderId} FOR UPDATE`
   const order = locked[0]
   if (!order) throw new Error('ORDER_NOT_FOUND')
-  if (order.status !== 'CANCELED' || !order.paidAt) throw new Error('REFUND_NOT_REQUIRED')
+  if (order.status !== 'CANCELED' || !order.paidAt || order.totalAmount <= 0) throw new Error('REFUND_NOT_REQUIRED')
   if (input.amount > order.totalAmount) throw new Error('REFUND_AMOUNT_EXCEEDED')
   if (await tx.adminActionLog.findFirst({ where: refundLogWhere(orderId), select: { id: true } })) {
     throw new Error('ALREADY_REFUNDED')

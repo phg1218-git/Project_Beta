@@ -31,6 +31,7 @@ async function getOrders(status: string, q: string, page: number) {
       })
       where.status = 'CANCELED'
       where.paidAt = { not: null }
+      where.totalAmount = { gt: 0 }
       where.id = { notIn: refunded.map((r) => r.targetId) }
     }
 
@@ -57,7 +58,7 @@ async function getOrders(status: string, q: string, page: number) {
       }),
       prisma.order.count({ where }),
     ])
-    const paidCanceledIds = orders.filter((o) => o.status === 'CANCELED' && o.paidAt).map((o) => o.id)
+    const paidCanceledIds = orders.filter((o) => o.status === 'CANCELED' && o.totalAmount > 0 && o.paidAt).map((o) => o.id)
     const refundLogs = paidCanceledIds.length
       ? await prisma.adminActionLog.findMany({
           where: { action: 'refund', targetType: 'order', targetId: { in: paidCanceledIds } },
@@ -230,7 +231,7 @@ export default async function AdminOrdersPage({ searchParams }: PageProps) {
                     </td>
                     <td className="px-4 py-3">
                       <OrderStatusBadge status={order.status} />
-                      {order.status === 'CANCELED' && order.paidAt && (
+                      {order.status === 'CANCELED' && order.totalAmount > 0 && order.paidAt && (
                         refunds.get(order.id)
                           ? <p className="mt-1 text-xs text-gray-500">환불 {formatPrice(refunds.get(order.id)!.amount)} 기록됨</p>
                           : <p className="mt-1 text-xs font-semibold text-red-600">환불 필요</p>

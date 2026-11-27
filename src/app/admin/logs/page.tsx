@@ -7,6 +7,7 @@ export const dynamic = 'force-dynamic'
 
 const ACTION_LABELS: Record<string, string> = {
   'confirm-payment': '입금확인',
+  complimentary: '관리자 증정처리',
   ship: '배송시작',
   delivered: '배송완료',
   expire: '만료정리',
@@ -103,6 +104,7 @@ export default async function AdminLogsPage({ searchParams }: PageProps) {
         >
           <option value="">액션 전체</option>
           <option value="confirm-payment">입금확인</option>
+          <option value="complimentary">관리자 증정처리</option>
           <option value="ship">배송시작</option>
           <option value="delivered">배송완료</option>
           <option value="expire">만료정리</option>
